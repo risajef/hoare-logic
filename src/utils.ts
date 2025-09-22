@@ -29,17 +29,39 @@ export function isValidProof(node: TreeNode): boolean {
   }
   if (node.rule === 'conditional' && node.stmt.type === 'conditional' && node.children.length === 2) {
     const [child1, child2] = node.children;
-    return child1.pre === `${node.pre} ∧ ${node.stmt.cond}` &&
-           child2.pre === `${node.pre} ∧ ¬${node.stmt.cond}` &&
-           child1.post === node.post && child2.post === node.post &&
-           isValidProof(child1) && isValidProof(child2);
+    const normalize = (str: string) => str
+      .replace(/\s+/g, '') // Remove spaces
+      .replace(/¬|not/g, 'not') // Normalize not
+      .replace(/∧|\band\b/g, 'and') // Normalize and
+      .replace(/\(([^()]+)\)/g, '$1'); // Remove voluntary brackets
+
+    const normalizedPre = normalize(node.pre);
+    const normalizedCond = normalize(node.stmt.cond);
+    const normalizedChild1Pre = normalize(child1.pre);
+    const normalizedChild2Pre = normalize(child2.pre);
+    const normalizedChild1Post = normalize(child1.post);
+    const normalizedChild2Post = normalize(child2.post);
+    const normalizedPost = normalize(node.post);
+
+    return (normalizedChild1Pre === normalize(`${normalizedPre} and ${normalizedCond}`) &&
+        normalizedChild2Pre === normalize(`not ${normalizedCond} and ${normalizedPre}`) &&
+        normalizedChild1Post === normalizedPost &&
+        normalizedChild2Post === normalizedPost &&
+        isValidProof(child1) && isValidProof(child2));
   }
   if (node.rule === 'while' && node.stmt.type === 'while' && node.children.length === 1) {
     const child = node.children[0];
-    return child.pre === `${node.pre} ∧ ${node.stmt.cond}` &&
-           child.post === node.pre &&
-           node.post === `${node.pre} ∧ ¬${node.stmt.cond}` &&
-           isValidProof(child);
+    const normalize = (str: string) => str
+      .replace(/\s+/g, '') // Remove spaces
+      .replace(/¬|not/g, 'not') // Normalize not
+      .replace(/∧|\band\b/g, 'and') // Normalize and
+      .replace(/\(([^()]+)\)/g, '$1'); // Remove voluntary brackets
+
+    return normalize(child.pre) === normalize(`${node.pre} and ${node.stmt.cond}`) &&
+         normalize(child.post) === normalize(node.pre) &&
+         (normalize(node.post) === normalize(`not ${node.stmt.cond} and ${node.pre}`) ||
+        normalize(node.post) === normalize(`${node.pre} and not ${node.stmt.cond}`)) &&
+         isValidProof(child);
   }
   if (node.rule === 'consequence' && node.children.length === 1 && node.pre && node.post) {
     // Consequence rule: allows strengthening pre or weakening post
