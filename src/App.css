@@ -1,0 +1,256 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-main);
+  background: var(--bg-main);
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.tree-node {
+  border: 1px solid var(--divider);
+  margin: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background-color: var(--bg-main);
+  display: inline-block;
+  min-width: 200px;
+  position: relative;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.tree-node.invalid-node {
+  border-color: var(--error);
+  background-color: rgba(178, 34, 34, 0.1); /* light error background */
+}
+
+.tree-node p {
+  margin: 5px 0;
+  font-weight: bold;
+}
+
+.rule-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.rule-buttons button {
+  margin: 2px;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 5px;
+  border: none;
+  background-color: var(--primary);
+  color: var(--color-on-dark);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.rule-buttons button:hover {
+  background-color: var(--primary-hover);
+}
+
+.rule-buttons button:active {
+  cursor: grabbing;
+}
+
+.children {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.valid {
+  color: var(--success);
+  font-weight: bold;
+}
+
+.invalid {
+  color: var(--error);
+  font-weight: bold;
+}
+
+.form {
+  margin-bottom: 20px;
+}
+
+.form input {
+  margin: 5px;
+  padding: 8px;
+  width: 200px;
+  border: 2px solid var(--divider);
+  border-radius: 5px;
+  background: var(--bg-main);
+  color: var(--text-main);
+}
+
+.form input:hover {
+  border-color: var(--text-secondary);
+}
+
+.form input.drag-over {
+  border-color: var(--accent-blue);
+  background-color: var(--bg-secondary);
+}
+
+.form button {
+  padding: 8px 16px;
+  background-color: var(--primary);
+  color: var(--color-on-dark);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.form button:hover {
+  background-color: var(--primary-hover);
+}
+
+.palette {
+  margin-bottom: 20px;
+  padding: 10px;
+  border: 1px solid var(--divider);
+  border-radius: 5px;
+  background: var(--bg-secondary);
+}
+
+.palette h3 {
+  margin: 0 0 10px 0;
+  color: var(--primary);
+}
+
+.stmt-blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.stmt-block {
+  padding: 10px;
+  border-radius: 15px;
+  background-color: var(--accent-gold);
+  color: var(--text-main);
+  cursor: grab;
+  font-weight: bold;
+  text-align: center;
+  min-width: 80px;
+}
+
+.stmt-block:hover {
+  background-color: var(--warning);
+}
+
+.stmt-block:active {
+  cursor: grabbing;
+}
+
+.stmt-builder-container {
+  margin: 10px 0;
+}
+
+.stmt-builder-container label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: var(--text-main);
+}
+
+.stmt-drop-zone {
+  border: 2px dashed var(--divider);
+  padding: 20px;
+  text-align: center;
+  border-radius: 5px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stmt-drop-zone:hover {
+  border-color: var(--text-secondary);
+}
+
+.stmt-block.built {
+  background-color: var(--accent-gold);
+  color: var(--text-main);
+  padding: 10px;
+  border-radius: 15px;
+  display: inline-block;
+  margin: 5px;
+  position: relative;
+}
+
+.stmt-block.built button {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--error);
+  color: var(--color-on-dark);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sequence, .conditional, .while {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sequence > div, .conditional > div, .while > div {
+  margin: 5px 0;
+}
+
+.sequence {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.sequence > div {
+  margin: 0 5px;
+}
