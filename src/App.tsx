@@ -1,246 +1,237 @@
-import { useState } from 'react';
-import type { TreeNode, BuilderStatement } from './types';
-import { stmtToString, isValidProof, builderToStatement } from './utils';
+import { useState, useEffect } from 'react';
+import type { TreeNode, BuilderStatement, Expression } from './types';
+import { isValidProof, builderToStatement, isComplete } from './utils';
+import TreeNodeComponent from './components/TreeNodeComponent';
+import ExpressionBuilder from './components/ExpressionBuilder';
+import StatementBuilder from './components/StatementBuilder';
+import IntermediateModal from './components/IntermediateModal';
+import ConsequenceModal from './components/ConsequenceModal';
+import Palette from './components/Palette';
 import './App.css';
-
-function TreeNodeComponent({ node, onApplyRule }: { node: TreeNode; onApplyRule: (node: TreeNode, rule: string) => void }) {
-  const isValid = isValidProof(node);
-  return (
-    <div className={`tree-node ${isValid ? '' : 'invalid-node'}`}>
-      <p>{`{${node.pre}} ${stmtToString(node.stmt)} {${node.post}}`}</p>
-      {node.rule && <p>Rule: {node.rule}</p>}
-      {node.rule === 'consequence' && node.children.length === 1 && (
-        <p>Obligations: {node.pre} ⊨ {node.children[0].pre} and {node.children[0].post} ⊨ {node.post}</p>
-      )}
-      <div className="rule-buttons">
-        <button onClick={() => onApplyRule(node, 'skip')}>Skip</button>
-        <button onClick={() => onApplyRule(node, 'assign')}>Assign</button>
-        <button onClick={() => onApplyRule(node, 'sequence')}>Sequence</button>
-        <button onClick={() => onApplyRule(node, 'conditional')}>Conditional</button>
-        <button onClick={() => onApplyRule(node, 'consequence')}>Consequence</button>
-        <button onClick={() => onApplyRule(node, 'while')}>While</button>
-      </div>
-      <div className="children">
-        {node.children.map((child, i) => <TreeNodeComponent key={i} node={child} onApplyRule={onApplyRule} />)}
-      </div>
-    </div>
-  );
-}
-
-function StatementBuilder({ stmt, onChange }: { stmt: BuilderStatement | null; onChange: (newStmt: BuilderStatement | null) => void }) {
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const type = e.dataTransfer.getData('stmtType');
-    if (type === 'skip') {
-      onChange({ type: 'skip' });
-    } else if (type === 'assign') {
-      const varName = prompt('Enter variable name');
-      const expr = prompt('Enter expression');
-      if (varName && expr) {
-        onChange({ type: 'assign', var: varName, expr });
-      }
-    } else if (type === 'sequence') {
-      onChange({ type: 'sequence', s1: null, s2: null });
-    } else if (type === 'conditional') {
-      const cond = prompt('Enter condition');
-      if (cond) {
-        onChange({ type: 'conditional', cond, s1: null, s2: null });
-      }
-    } else if (type === 'while') {
-      const cond = prompt('Enter condition');
-      if (cond) {
-        onChange({ type: 'while', cond, body: null });
-      }
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  if (!stmt) {
-    return (
-      <div className="stmt-drop-zone" onDrop={handleDrop} onDragOver={handleDragOver}>
-        Drop statement here
-      </div>
-    );
-  }
-
-  if (stmt.type === 'skip') {
-    return (
-      <div className="stmt-block built">
-        skip
-        <button onClick={() => onChange(null)}>Remove</button>
-      </div>
-    );
-  }
-
-  if (stmt.type === 'assign') {
-    return (
-      <div className="stmt-block built">
-        {stmt.var} := {stmt.expr}
-        <button onClick={() => onChange(null)}>Remove</button>
-      </div>
-    );
-  }
-
-  if (stmt.type === 'sequence') {
-    return (
-      <div className="stmt-block built">
-        <StatementBuilder stmt={stmt.s1} onChange={(newS1) => onChange({ ...stmt, s1: newS1 })} />
-        ;
-        <StatementBuilder stmt={stmt.s2} onChange={(newS2) => onChange({ ...stmt, s2: newS2 })} />
-        <button onClick={() => onChange(null)}>Remove</button>
-      </div>
-    );
-  }
-
-  if (stmt.type === 'conditional') {
-    return (
-      <div className="stmt-block built conditional">
-        if {stmt.cond} then
-        <StatementBuilder stmt={stmt.s1} onChange={(newS1) => onChange({ ...stmt, s1: newS1 })} />
-        else
-        <StatementBuilder stmt={stmt.s2} onChange={(newS2) => onChange({ ...stmt, s2: newS2 })} />
-        <button onClick={() => onChange(null)}>Remove</button>
-      </div>
-    );
-  }
-
-  if (stmt.type === 'while') {
-    return (
-      <div className="stmt-block built while">
-        while {stmt.cond} do
-        <StatementBuilder stmt={stmt.body} onChange={(newBody) => onChange({ ...stmt, body: newBody })} />
-        <button onClick={() => onChange(null)}>Remove</button>
-      </div>
-    );
-  }
-
-  return null;
-}
 
 function App() {
   const [root, setRoot] = useState<TreeNode | null>(null);
-  const [pre, setPre] = useState('');
+  const [preExpr, setPreExpr] = useState<Expression | null>(null);
   const [builtStmt, setBuiltStmt] = useState<BuilderStatement | null>(null);
-  const [post, setPost] = useState('');
+  const [postExpr, setPostExpr] = useState<Expression | null>(null);
+  const [editingIntermediate, setEditingIntermediate] = useState(false);
+  const [intermediateExpr, setIntermediateExpr] = useState<Expression | null>(null);
+  const [editingConsequence, setEditingConsequence] = useState(false);
+  const [newPreExpr, setNewPreExpr] = useState<Expression | null>(null);
+  const [newPostExpr, setNewPostExpr] = useState<Expression | null>(null);
+  const [currentPath, setCurrentPath] = useState<number[] | null>(null);
 
   const createRoot = () => {
     const stmt = builderToStatement(builtStmt);
-    if (!stmt) {
-      alert('Incomplete statement');
+    if (!stmt || !preExpr || !postExpr) {
+      alert('Incomplete statement or expressions');
       return;
     }
-    setRoot({ pre, stmt, post, children: [] });
+    setRoot({ pre: preExpr, stmt, post: postExpr, children: [] });
   };
 
-  const applyRule = (node: TreeNode, rule: string) => {
+  const setNodeByPath = (node: TreeNode, path: number[], newNode: TreeNode): TreeNode => {
+    if (path.length === 0) return newNode;
+    const [first, ...rest] = path;
+    return {
+      ...node,
+      children: node.children.map((c, i) => i === first ? setNodeByPath(c, rest, newNode) : c)
+    };
+  };
+
+  const getNodeByPath = (node: TreeNode, path: number[]): TreeNode | null => {
+    let cur: TreeNode | null = node;
+    for (const idx of path) {
+      if (!cur || !cur.children || idx < 0 || idx >= cur.children.length) return null;
+      cur = cur.children[idx];
+    }
+    return cur;
+  };
+
+  const applyRule = (pathOrNode: number[] | TreeNode, maybeRuleOrNode: any, maybeRule?: string) => {
+    // support two signatures:
+    // 1) applyRule(path, rule)  -- new from TreeNodeComponent
+    // 2) applyRule(node, rule)  -- legacy
+    let path: number[] | undefined;
+    let node: TreeNode | null = null;
+    let rule: string;
+
+    if (Array.isArray(pathOrNode)) {
+      path = pathOrNode;
+      if (typeof maybeRuleOrNode === 'string') {
+        rule = maybeRuleOrNode;
+        if (!root) return;
+        node = getNodeByPath(root, path);
+        if (!node) return;
+      } else {
+        // unexpected shape, try legacy
+        node = maybeRuleOrNode;
+        rule = maybeRule!;
+      }
+    } else {
+      node = pathOrNode;
+      rule = maybeRuleOrNode;
+    }
+
+    if (!node) return;
+
+    const commit = (updatedNode?: TreeNode) => {
+      if (!root) return;
+      if (path && updatedNode) {
+        const newRoot = setNodeByPath(root, path, updatedNode);
+        setRoot(newRoot);
+      } else {
+        // shallow copy to trigger render
+        setRoot({ ...root });
+      }
+    };
+
     if (rule === 'skip') {
       if (node.stmt.type !== 'skip') return;
       node.children = [];
       node.rule = 'skip';
+      commit(node);
     } else if (rule === 'assign') {
       if (node.stmt.type !== 'assign') return;
       node.children = [];
       node.rule = 'assign';
+      commit(node);
     } else if (rule === 'sequence') {
       if (node.stmt.type !== 'sequence') return;
-      const intermediate = prompt('Enter intermediate condition R');
-      if (!intermediate) return;
-      node.children = [
-        { pre: node.pre, stmt: node.stmt.s1, post: intermediate, children: [] },
-        { pre: intermediate, stmt: node.stmt.s2, post: node.post, children: [] }
-      ];
-      node.rule = 'sequence';
+      // open modal
+      console.log('applyRule: sequence at path', path);
+      setEditingIntermediate(true);
+      setIntermediateExpr(null);
+      setCurrentPath(path || []);
     } else if (rule === 'conditional') {
       if (node.stmt.type !== 'conditional') return;
       node.children = [
-        { pre: `${node.pre} ∧ ${node.stmt.cond}`, stmt: node.stmt.s1, post: node.post, children: [] },
-        { pre: `${node.pre} ∧ ¬${node.stmt.cond}`, stmt: node.stmt.s2, post: node.post, children: [] }
+        { pre: { type: 'binop', op: '&&', left: node.pre, right: node.stmt.cond }, stmt: node.stmt.s1, post: node.post, children: [] },
+        { pre: { type: 'binop', op: '&&', left: node.pre, right: { type: 'unop', op: '!', expr: node.stmt.cond } }, stmt: node.stmt.s2, post: node.post, children: [] }
       ];
       node.rule = 'conditional';
+      commit(node);
     } else if (rule === 'consequence') {
-      // Prompt for new pre/post conditions
-      const newPre = prompt('Enter strengthened precondition (P)');
-      const newPost = prompt('Enter weakened postcondition (Q)');
-      if (!newPre || !newPost) return;
-      node.children = [
-        { pre: newPre, stmt: node.stmt, post: newPost, children: [] }
-      ];
-      node.rule = 'consequence';
+      setEditingConsequence(true);
+      setNewPreExpr(null);
+      setNewPostExpr(null);
+      setCurrentPath(path || []);
     } else if (rule === 'while') {
       if (node.stmt.type !== 'while') return;
       node.children = [
-        { pre: `${node.pre} ∧ ${node.stmt.cond}`, stmt: node.stmt.body, post: node.pre, children: [] }
+        { pre: { type: 'binop', op: '&&', left: node.pre, right: node.stmt.cond }, stmt: node.stmt.body, post: node.pre, children: [] }
       ];
       node.rule = 'while';
+      commit(node);
     }
-    setRoot({ ...root! });
   };
 
-  // const handleStmtDrop = (e: React.DragEvent) => {
-  //   e.preventDefault();
-  //   const type = e.dataTransfer.getData('stmtType');
-  //   if (type === 'skip') {
-  //     setBuiltStmt({ type: 'skip' });
-  //   } else if (type === 'assign') {
-  //     const varName = prompt('Enter variable name');
-  //     const expr = prompt('Enter expression');
-  //     if (varName && expr) {
-  //       setBuiltStmt({ type: 'assign', var: varName, expr });
-  //     }
-  //   } else if (type === 'sequence') {
-  //     const s1 = prompt('Enter first statement');
-  //     const s2 = prompt('Enter second statement');
-  //     if (s1 && s2) {
-  //       setBuiltStmt({ type: 'sequence', s1: parseStatement(s1)!, s2: parseStatement(s2)! });
-  //     }
-  //   } else if (type === 'conditional') {
-  //     const cond = prompt('Enter condition');
-  //     const s1 = prompt('Enter then statement');
-  //     const s2 = prompt('Enter else statement');
-  //     if (cond && s1 && s2) {
-  //       setBuiltStmt({ type: 'conditional', cond, s1: parseStatement(s1)!, s2: parseStatement(s2)! });
-  //     }
-  //   } else if (type === 'while') {
-  //     const cond = prompt('Enter condition');
-  //     const body = prompt('Enter body statement');
-  //     if (cond && body) {
-  //       setBuiltStmt({ type: 'while', cond, body: parseStatement(body)! });
-  //     }
-  //   }
-  // };
+  const confirmIntermediate = () => {
+    console.log('confirmIntermediate called, currentPath =', currentPath, 'intermediateExpr =', intermediateExpr, 'root =', root);
+    if (!root) return;
+    if (isComplete(intermediateExpr) && currentPath !== null) {
+      const expr = intermediateExpr as Expression;
+
+      setRoot(prev => {
+        if (!prev) return prev;
+        const nodeAtPath = getNodeByPath(prev, currentPath!);
+        if (!nodeAtPath) return prev;
+        if (nodeAtPath.stmt.type !== 'sequence') return prev;
+        const seqStmt = nodeAtPath.stmt;
+        const newNode = {
+          ...nodeAtPath,
+          children: [
+            { pre: nodeAtPath.pre, stmt: seqStmt.s1, post: expr, children: [] },
+            { pre: expr, stmt: seqStmt.s2, post: nodeAtPath.post, children: [] }
+          ],
+          rule: 'sequence'
+        } as TreeNode;
+        console.log('updated in setRoot =', newNode);
+        return setNodeByPath(prev, currentPath!, newNode);
+      });
+
+      setEditingIntermediate(false);
+      setIntermediateExpr(null);
+      setCurrentPath(null);
+    }
+  };
+
+  useEffect(() => {
+    console.log('root changed:', root);
+  }, [root]);
+
+  const confirmConsequence = () => {
+    if (!root) return;
+    if (isComplete(newPreExpr) && isComplete(newPostExpr) && currentPath !== null) {
+      const preExpr = newPreExpr as Expression;
+      const postExpr = newPostExpr as Expression;
+
+      setRoot(prev => {
+        if (!prev) return prev;
+        const nodeAtPath = getNodeByPath(prev, currentPath!);
+        if (!nodeAtPath) return prev;
+        const newNode: TreeNode = {
+          ...nodeAtPath,
+          children: [
+            { pre: preExpr, stmt: nodeAtPath.stmt, post: postExpr, children: [] }
+          ],
+          rule: 'consequence'
+        };
+        return setNodeByPath(prev, currentPath!, newNode);
+      });
+
+      setEditingConsequence(false);
+      setNewPreExpr(null);
+      setNewPostExpr(null);
+      setCurrentPath(null);
+    }
+  };
 
   return (
     <div>
+      {/* Main application content: either the creation form (no root) or the tree view */}
       {!root ? (
         <div>
-          <div className="palette">
-            <h3>Statement Blocks</h3>
-            <div className="stmt-blocks">
-              <div className="stmt-block" draggable onDragStart={(e) => e.dataTransfer.setData('stmtType', 'skip')}>Skip</div>
-              <div className="stmt-block" draggable onDragStart={(e) => e.dataTransfer.setData('stmtType', 'assign')}>Assign</div>
-              <div className="stmt-block" draggable onDragStart={(e) => e.dataTransfer.setData('stmtType', 'sequence')}>Sequence</div>
-              <div className="stmt-block" draggable onDragStart={(e) => e.dataTransfer.setData('stmtType', 'conditional')}>Conditional</div>
-              <div className="stmt-block" draggable onDragStart={(e) => e.dataTransfer.setData('stmtType', 'while')}>While</div>
-            </div>
-          </div>
-          <div className="form">
-            <input placeholder="Precondition" value={pre} onChange={e => setPre(e.target.value)} />
+          <Palette type="statement" />
+          <Palette type="expression" />
+          <div className="form container-bordered">
+            <label>Precondition:</label>
+            <ExpressionBuilder expr={preExpr} onChange={setPreExpr} />
             <div className="stmt-builder-container">
               <label>Statement:</label>
               <StatementBuilder stmt={builtStmt} onChange={setBuiltStmt} />
             </div>
-            <input placeholder="Postcondition" value={post} onChange={e => setPost(e.target.value)} />
-            <button onClick={createRoot}>Create Root</button>
+            <label>Postcondition:</label>
+            <ExpressionBuilder expr={postExpr} onChange={setPostExpr} />
+            <button className="btn-primary" onClick={createRoot}>Create Root</button>
           </div>
         </div>
       ) : (
         <div>
-          <TreeNodeComponent node={root} onApplyRule={applyRule} />
+          <TreeNodeComponent node={root} path={[]} onApplyRule={(path, node, rule) => applyRule(path, node, rule)} />
           <p className={isValidProof(root) ? 'valid' : 'invalid'}>Valid Proof: {isValidProof(root) ? 'Yes' : 'No'}</p>
         </div>
+      )}
+
+      {/* Overlay modals: rendered on top of the main content so user can still see the page while editing */}
+      {editingIntermediate && (
+        <IntermediateModal
+          intermediateExpr={intermediateExpr}
+          setIntermediateExpr={setIntermediateExpr}
+          onConfirm={confirmIntermediate}
+          onCancel={() => { setEditingIntermediate(false); setIntermediateExpr(null); setCurrentPath(null); }}
+        />
+      )}
+
+      {editingConsequence && (
+        <ConsequenceModal
+          newPreExpr={newPreExpr}
+          setNewPreExpr={setNewPreExpr}
+          newPostExpr={newPostExpr}
+          setNewPostExpr={setNewPostExpr}
+          onConfirm={confirmConsequence}
+          onCancel={() => { setEditingConsequence(false); setNewPreExpr(null); setNewPostExpr(null); setCurrentPath(null); }}
+        />
       )}
     </div>
   );

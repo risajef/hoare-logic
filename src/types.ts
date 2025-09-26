@@ -1,4 +1,10 @@
-export type Expression = string;
+export type Expression =
+  | { type: 'var'; name: string }
+  | { type: 'const'; value: number }
+  | { type: 'true' }
+  | { type: 'false' }
+  | { type: 'binop'; op: string; left: Expression | null; right: Expression | null }
+  | { type: 'unop'; op: string; expr: Expression | null };
 
 export type Statement =
   | { type: 'skip' }
@@ -8,16 +14,16 @@ export type Statement =
   | { type: 'while'; cond: Expression; body: Statement };
 
 export type TreeNode = {
-  pre: string;
+  pre: Expression;
   stmt: Statement;
-  post: string;
+  post: Expression;
   children: TreeNode[];
   rule?: string;
 };
 
 export type BuilderStatement = 
   | { type: 'skip' }
-  | { type: 'assign'; var: string; expr: string }
+  | { type: 'assign'; var: string; expr: Expression | null }
   | { type: 'sequence'; s1: BuilderStatement | null; s2: BuilderStatement | null }
-  | { type: 'conditional'; cond: string; s1: BuilderStatement | null; s2: BuilderStatement | null }
-  | { type: 'while'; cond: string; body: BuilderStatement | null };
+  | { type: 'conditional'; cond: Expression | null; s1: BuilderStatement | null; s2: BuilderStatement | null }
+  | { type: 'while'; cond: Expression | null; body: BuilderStatement | null };

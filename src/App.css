@@ -1,3 +1,4 @@
+/* ===== ROOT & GLOBAL STYLES ===== */
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -5,8 +6,347 @@
   text-align: center;
   color: var(--text-main);
   background: var(--bg-main);
+  border: 1px solid var(--divider);
+  border-radius: 15px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
+/* ===== UTILITY CLASSES ===== */
+.card { padding: 2em; }
+.read-the-docs { color: #888; }
+
+/* Common container styles */
+.container-bordered {
+  border: 2px solid var(--divider);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.container-modal {
+  position: fixed;
+  /* remove default centering so JS can position the modal and allow dragging */
+  background: var(--bg-main);
+  border: 3px solid var(--primary);
+  border-radius: 15px;
+  padding: 25px;
+  z-index: 1000;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  /* ensure the modal can be placed anywhere and not be clipped by transform */
+  transform: none;
+}
+
+/* Header handle inside modals for dragging */
+.container-modal > div[style] {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Slightly increase z-index to ensure modal stays above other content when dragged */
+.container-modal.dragging {
+  z-index: 1100;
+}
+
+/* Common button styles */
+.btn-primary {
+  padding: 8px 16px;
+  background-color: var(--primary);
+  color: var(--color-on-dark);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-small {
+  margin: 2px;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 5px;
+  border: none;
+  background-color: var(--primary);
+  color: var(--color-on-dark);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-small:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-small:active {
+  cursor: grabbing;
+}
+
+.btn-remove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--error);
+  color: var(--color-on-dark);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* Common block styles */
+.block-base {
+  padding: 10px;
+  border-radius: 15px;
+  color: var(--text-main);
+  cursor: grab;
+  font-weight: bold;
+  text-align: center;
+  min-width: 80px;
+  transition: background-color 0.2s;
+}
+
+.block-base:active {
+  cursor: grabbing;
+}
+
+.block-built {
+  display: inline-block;
+  margin: 5px;
+  position: relative;
+  border: 2px solid var(--divider);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Common drop zone styles */
+.drop-zone {
+  text-align: center;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+  transition: border-color 0.2s;
+}
+
+.drop-zone:hover {
+  border-color: var(--text-secondary);
+}
+
+/* ===== TREE NODE STYLES ===== */
+.tree-node {
+  border: 1px solid var(--divider);
+  margin: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background-color: var(--bg-main);
+  display: inline-block;
+  min-width: 200px;
+  position: relative;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.tree-node.invalid-node {
+  border-color: var(--error);
+  background-color: rgba(178, 34, 34, 0.1);
+}
+
+.tree-node p {
+  margin: 5px 0;
+  font-weight: bold;
+}
+
+.rule-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+
+.children {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 15px;
+  padding: 10px;
+  border-top: 1px solid var(--divider);
+  background: rgba(0,0,0,0.02);
+  border-radius: 5px;
+}
+
+/* ===== VALIDATION STYLES ===== */
+.valid {
+  color: var(--success);
+  font-weight: bold;
+}
+
+.invalid {
+  color: var(--error);
+  font-weight: bold;
+}
+
+/* ===== FORM STYLES ===== */
+.form {
+  margin-bottom: 20px;
+  padding: 20px;
+  /* Inherits container-bordered */
+}
+
+.form input {
+  margin: 5px;
+  padding: 8px;
+  width: 200px;
+  border: 2px solid var(--divider);
+  border-radius: 5px;
+  background: var(--bg-main);
+  color: var(--text-main);
+  transition: border-color 0.2s;
+}
+
+.form input:hover {
+  border-color: var(--text-secondary);
+}
+
+.form input.drag-over {
+  border-color: var(--accent-blue);
+  background-color: var(--bg-secondary);
+}
+
+/* ===== PALETTE STYLES ===== */
+.palette {
+  margin-bottom: 20px;
+  padding: 15px;
+  /* Inherits container-bordered */
+}
+
+.palette + .palette {
+  margin-top: 10px;
+}
+
+.palette h3 {
+  margin: 0 0 10px 0;
+  color: var(--primary);
+}
+
+.stmt-blocks,
+.expr-blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ===== STATEMENT BLOCKS ===== */
+.stmt-block {
+  /* Inherits block-base */
+  background-color: var(--accent-gold);
+}
+
+.stmt-block:hover {
+  background-color: var(--warning);
+}
+
+.stmt-drop-zone {
+  border: 3px dashed var(--divider);
+  padding: 20px;
+  min-height: 50px;
+  /* Inherits drop-zone */
+}
+
+.stmt-block.built {
+  /* Inherits block-built */
+  background-color: var(--accent-gold);
+  padding: 10px;
+  border-radius: 15px;
+}
+
+/* ===== EXPRESSION BLOCKS ===== */
+.expr-block {
+  /* Inherits block-base */
+  background-color: var(--accent-blue);
+}
+
+.expr-block:hover {
+  background-color: var(--info);
+}
+
+.expr-drop-zone {
+  border: 3px dashed var(--divider);
+  padding: 10px;
+  min-height: 30px;
+  /* Inherits drop-zone */
+}
+
+.expr-block.built {
+  /* Inherits block-built */
+  background-color: var(--accent-blue);
+  padding: 5px;
+  border-radius: 10px;
+  margin: 2px;
+}
+
+/* ===== STATEMENT BUILDER ===== */
+.stmt-builder-container {
+  margin: 10px 0;
+}
+
+.stmt-builder-container label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: var(--text-main);
+}
+
+.sequence, .conditional, .while {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sequence > div, .conditional > div, .while > div {
+  margin: 5px 0;
+}
+
+.sequence {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.sequence > div {
+  margin: 0 5px;
+}
+
+/* ===== MODAL EDITORS ===== */
+.intermediate-editor h3 {
+  margin-top: 0;
+  color: var(--text-main);
+}
+
+.consequence-editor h3 {
+  margin-top: 0;
+  color: var(--text-main);
+}
+
+.consequence-editor label {
+  display: block;
+  margin: 10px 0 5px 0;
+  font-weight: bold;
+  color: var(--text-main);
+}
+
+/* ===== UNUSED/LEGACY STYLES ===== */
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -33,224 +373,4 @@
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
-.tree-node {
-  border: 1px solid var(--divider);
-  margin: 10px;
-  padding: 10px;
-  border-radius: 10px;
-  background-color: var(--bg-main);
-  display: inline-block;
-  min-width: 200px;
-  position: relative;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.tree-node.invalid-node {
-  border-color: var(--error);
-  background-color: rgba(178, 34, 34, 0.1); /* light error background */
-}
-
-.tree-node p {
-  margin: 5px 0;
-  font-weight: bold;
-}
-
-.rule-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin: 10px 0;
-}
-
-.rule-buttons button {
-  margin: 2px;
-  padding: 5px 10px;
-  font-size: 12px;
-  border-radius: 5px;
-  border: none;
-  background-color: var(--primary);
-  color: var(--color-on-dark);
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.rule-buttons button:hover {
-  background-color: var(--primary-hover);
-}
-
-.rule-buttons button:active {
-  cursor: grabbing;
-}
-
-.children {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.valid {
-  color: var(--success);
-  font-weight: bold;
-}
-
-.invalid {
-  color: var(--error);
-  font-weight: bold;
-}
-
-.form {
-  margin-bottom: 20px;
-}
-
-.form input {
-  margin: 5px;
-  padding: 8px;
-  width: 200px;
-  border: 2px solid var(--divider);
-  border-radius: 5px;
-  background: var(--bg-main);
-  color: var(--text-main);
-}
-
-.form input:hover {
-  border-color: var(--text-secondary);
-}
-
-.form input.drag-over {
-  border-color: var(--accent-blue);
-  background-color: var(--bg-secondary);
-}
-
-.form button {
-  padding: 8px 16px;
-  background-color: var(--primary);
-  color: var(--color-on-dark);
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.form button:hover {
-  background-color: var(--primary-hover);
-}
-
-.palette {
-  margin-bottom: 20px;
-  padding: 10px;
-  border: 1px solid var(--divider);
-  border-radius: 5px;
-  background: var(--bg-secondary);
-}
-
-.palette h3 {
-  margin: 0 0 10px 0;
-  color: var(--primary);
-}
-
-.stmt-blocks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.stmt-block {
-  padding: 10px;
-  border-radius: 15px;
-  background-color: var(--accent-gold);
-  color: var(--text-main);
-  cursor: grab;
-  font-weight: bold;
-  text-align: center;
-  min-width: 80px;
-}
-
-.stmt-block:hover {
-  background-color: var(--warning);
-}
-
-.stmt-block:active {
-  cursor: grabbing;
-}
-
-.stmt-builder-container {
-  margin: 10px 0;
-}
-
-.stmt-builder-container label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-  color: var(--text-main);
-}
-
-.stmt-drop-zone {
-  border: 2px dashed var(--divider);
-  padding: 20px;
-  text-align: center;
-  border-radius: 5px;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.stmt-drop-zone:hover {
-  border-color: var(--text-secondary);
-}
-
-.stmt-block.built {
-  background-color: var(--accent-gold);
-  color: var(--text-main);
-  padding: 10px;
-  border-radius: 15px;
-  display: inline-block;
-  margin: 5px;
-  position: relative;
-}
-
-.stmt-block.built button {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: var(--error);
-  color: var(--color-on-dark);
-  border: none;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.sequence, .conditional, .while {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.sequence > div, .conditional > div, .while > div {
-  margin: 5px 0;
-}
-
-.sequence {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-
-.sequence > div {
-  margin: 0 5px;
 }

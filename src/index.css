@@ -12,6 +12,22 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Custom theme variables */
+  --bg-main: #FFFFFF;
+  --bg-secondary: #F5F5F5;
+  --text-main: #1A1A1A;
+  --text-secondary: #666666;
+  --color-on-dark: #FFFFFF;
+  --primary: #DC143C; /* Crimson red */
+  --primary-hover: #B22222; /* Firebrick */
+  --accent-blue: #4169E1; /* Royal blue */
+  --accent-gold: #FFD700; /* Gold */
+  --success: #228B22; /* Forest green */
+  --error: #DC143C; /* Crimson red */
+  --warning: #FFA500; /* Orange */
+  --info: #1E90FF; /* Dodger blue */
+  --divider: #CCCCCC; /* Light gray */
 }
 
 a {
