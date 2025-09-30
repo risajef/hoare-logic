@@ -6,38 +6,71 @@ export function exprToString(expr: Expression): string {
     case 'const': return expr.value.toString();
     case 'true': return 'true';
     case 'false': return 'false';
-    case 'binop': return expr.left && expr.right ? `(${exprToString(expr.left)} ${expr.op === '==' ? '=' : expr.op} ${exprToString(expr.right)})` : '?';
-    case 'unop': return expr.expr ? `${expr.op === '!' ? 'not' : expr.op}${exprToString(expr.expr)}` : '?';
+    case 'binop': {
+      if (!expr.left || !expr.right) return '?';
+      let op = expr.op;
+      if (op === '==') op = '=';
+      else if (op === '&&') op = 'and';
+      else if (op === '||') op = 'or';
+      return `(${op} ${exprToString(expr.left)} ${exprToString(expr.right)})`;
+    }
+    case 'unop': return expr.expr ? `(${expr.op === '!' ? 'not' : expr.op} ${exprToString(expr.expr)})` : '?';
   }
+}
+
+function tokenize(s: string): string[] {
+  const tokens: string[] = [];
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === ' ') { i++; continue; }
+    if (s[i] === '(') {
+      let count = 1;
+      let j = i + 1;
+      while (j < s.length && count > 0) {
+        if (s[j] === '(') count++;
+        else if (s[j] === ')') count--;
+        j++;
+      }
+      tokens.push(s.slice(i, j));
+      i = j;
+    } else {
+      let j = i;
+      while (j < s.length && s[j] !== ' ' && s[j] !== '(' && s[j] !== ')') j++;
+      tokens.push(s.slice(i, j));
+      i = j;
+    }
+  }
+  return tokens;
 }
 
 export function parseExpression(str: string): Expression | null {
   str = str.trim();
-  // Replace readable operators with symbols
-  str = str.replace(/\band\b/g, '&&').replace(/\bor\b/g, '||').replace(/\bnot\b/g, '!').replace(/ = /g, ' == ');
   if (str === 'true') return { type: 'true' };
   if (str === 'false') return { type: 'false' };
   if (!isNaN(Number(str))) return { type: 'const', value: Number(str) };
-  // Simple binop, last occurrence
-  const ops = ['&&', '||', '==', '!=', '<=', '>=', '<', '>', '+', '-', '*', '/'];
-  for (const op of ops) {
-    const index = str.lastIndexOf(op);
-    if (index > 0 && index < str.length - op.length) {
-      const leftStr = str.slice(0, index).trim();
-      const rightStr = str.slice(index + op.length).trim();
-      const left = parseExpression(leftStr);
-      const right = parseExpression(rightStr);
-      if (left && right) return { type: 'binop', op, left, right };
+  if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(str)) return { type: 'var', name: str };
+  if (str.startsWith('(') && str.endsWith(')')) {
+    const inner = str.slice(1, -1).trim();
+    const tokens = tokenize(inner);
+    if (tokens.length === 0) return null;
+    const op = tokens[0];
+    if (op === '=' && tokens.length === 3) {
+      const left = parseExpression(tokens[1]);
+      const right = parseExpression(tokens[2]);
+      if (left && right) return { type: 'binop', op: '==', left, right };
+    } else if (op === 'and' && tokens.length === 3) {
+      const left = parseExpression(tokens[1]);
+      const right = parseExpression(tokens[2]);
+      if (left && right) return { type: 'binop', op: '&&', left, right };
+    } else if (op === 'or' && tokens.length === 3) {
+      const left = parseExpression(tokens[1]);
+      const right = parseExpression(tokens[2]);
+      if (left && right) return { type: 'binop', op: '||', left, right };
+    } else if (op === 'not' && tokens.length === 2) {
+      const expr = parseExpression(tokens[1]);
+      if (expr) return { type: 'unop', op: '!', expr };
     }
   }
-  // unop
-  if (str.startsWith('!')) {
-    const exprStr = str.slice(1).trim();
-    const expr = parseExpression(exprStr);
-    if (expr) return { type: 'unop', op: '!', expr };
-  }
-  // var
-  if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(str)) return { type: 'var', name: str };
   return null;
 }
 
@@ -106,7 +139,7 @@ export function isValidProof(node: TreeNode): boolean {
            isValidProof(child);
   }
   if (node.rule === 'consequence' && node.children.length === 1) {
-    return isValidProof(node.children[0]);
+    return (node.obligationsProved ?? false) && isValidProof(node.children[0]);
   }
   // For skip and assign, no children
   return false;
@@ -149,4 +182,17 @@ export function isComplete(expr: Expression | null): boolean {
   if (expr.type === 'binop') return isComplete(expr.left) && isComplete(expr.right);
   if (expr.type === 'unop') return isComplete(expr.expr);
   return false;
+}
+
+export function extractVars(expr: Expression): string[] {
+  const vars = new Set<string>();
+  function collect(e: Expression) {
+    switch (e.type) {
+      case 'var': vars.add(e.name); break;
+      case 'binop': if (e.left) collect(e.left); if (e.right) collect(e.right); break;
+      case 'unop': if (e.expr) collect(e.expr); break;
+    }
+  }
+  collect(expr);
+  return Array.from(vars);
 }

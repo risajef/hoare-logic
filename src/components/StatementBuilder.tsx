@@ -1,4 +1,4 @@
-import type { BuilderStatement, Expression } from '../types';
+import type { BuilderStatement } from '../types';
 import { parseExpression } from '../utils';
 import ExpressionBuilder from './ExpressionBuilder';
 

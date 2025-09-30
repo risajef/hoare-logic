@@ -19,6 +19,7 @@ export type TreeNode = {
   post: Expression;
   children: TreeNode[];
   rule?: string;
+  obligationsProved?: boolean;
 };
 
 export type BuilderStatement = 

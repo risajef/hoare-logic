@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import type { TreeNode } from '../types';
-import { exprToString, stmtToString, isValidProof } from '../utils';
+import { exprToString, stmtToString, isValidProof, extractVars, parseExpression } from '../utils';
 import { tryZ3 } from '../z3';
 
 interface TreeNodeComponentProps {
   node: TreeNode;
   path?: number[];
   onApplyRule: (path: number[], node: TreeNode, rule: string) => void;
+  onUpdateNode: (path: number[], updater: (node: TreeNode) => TreeNode) => void;
 }
 
-function TreeNodeComponent({ node, path = [], onApplyRule }: TreeNodeComponentProps) {
+function TreeNodeComponent({ node, path = [], onApplyRule, onUpdateNode }: TreeNodeComponentProps) {
   const isValid = isValidProof(node);
   const [proveStatus, setProveStatus] = useState<string | null>(null);
   const [proving, setProving] = useState(false);
@@ -26,7 +27,23 @@ function TreeNodeComponent({ node, path = [], onApplyRule }: TreeNodeComponentPr
     }
 
     // Build SMT-LIB-like lines or a simple textual format expected by the worker
-    const lines: string[] = obligations.map(o => `; ${o.name}\n(assert (or ${o.right} (not ${o.left})))\n(check-sat)`);
+    const lines: string[] = [
+      ...obligations.map(o => {
+        // Extract vars from this obligation
+        const leftExpr = parseExpression(o.left);
+        const rightExpr = parseExpression(o.right);
+        const obligationVars = new Set<string>();
+        if (leftExpr) extractVars(leftExpr).forEach(v => obligationVars.add(v));
+        if (rightExpr) extractVars(rightExpr).forEach(v => obligationVars.add(v));
+        console.log("number of vars in obligation", obligationVars.size, leftExpr, rightExpr, o);
+        if (obligationVars.size > 0) {
+          const varDecls = Array.from(obligationVars).map(v => `(${v} Int)`).join(' ');
+          return `; ${o.name}\n(assert (forall (${varDecls}) (or ${o.right} (not ${o.left}))))`;
+        } else {
+          return `; ${o.name}\n(assert (or ${o.right} (not ${o.left})))\n(check-sat)`;
+        }
+      })
+    ];
 
     setProving(true);
     setProveStatus('Proving...');
@@ -37,6 +54,7 @@ function TreeNodeComponent({ node, path = [], onApplyRule }: TreeNodeComponentPr
         setProveStatus('Z3 solver not available in this deployment');
       } else if (res.status === 'Valid') {
         setProveStatus('All obligations proved (Valid)');
+        onUpdateNode(path, node => ({ ...node, obligationsProved: true }));
       } else if (res.status === 'Invalid') {
         setProveStatus('At least one obligation is invalid');
       } else if (res.status === 'Unknown') {
@@ -78,7 +96,7 @@ function TreeNodeComponent({ node, path = [], onApplyRule }: TreeNodeComponentPr
       {proveStatus && <p style={{ marginTop: 8 }}>{proveStatus}</p>}
       <div className="children">
         {node.children.map((child, i) => (
-          <TreeNodeComponent key={i} node={child} path={[...path, i]} onApplyRule={onApplyRule} />
+          <TreeNodeComponent key={i} node={child} path={[...path, i]} onApplyRule={onApplyRule} onUpdateNode={onUpdateNode} />
         ))}
       </div>
     </div>

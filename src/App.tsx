@@ -10,7 +10,21 @@ import Palette from './components/Palette';
 import './App.css';
 
 function App() {
-  const [root, setRoot] = useState<TreeNode | null>(null);
+  const [root, setRoot] = useState<TreeNode | null>(
+  // Example initial tree with consequence rule applied
+  //   {
+  //   pre: { type: 'binop', op: '==', left: { type: 'var', name: 'x' }, right: { type: 'const', value: 0 } },
+  //   stmt: { type: 'skip' },
+  //   post: { type: 'true' },
+  //   rule: 'consequence',
+  //   children: [{
+  //     pre: { type: 'true' } ,
+  //     stmt: { type: 'skip' },
+  //     post: { type: 'true' },
+  //     children: []
+  //   }]
+  // }
+);
   const [preExpr, setPreExpr] = useState<Expression | null>(null);
   const [builtStmt, setBuiltStmt] = useState<BuilderStatement | null>(null);
   const [postExpr, setPostExpr] = useState<Expression | null>(null);
@@ -175,7 +189,8 @@ function App() {
           children: [
             { pre: preExpr, stmt: nodeAtPath.stmt, post: postExpr, children: [] }
           ],
-          rule: 'consequence'
+          rule: 'consequence',
+          obligationsProved: false
         };
         return setNodeByPath(prev, currentPath!, newNode);
       });
@@ -185,6 +200,10 @@ function App() {
       setNewPostExpr(null);
       setCurrentPath(null);
     }
+  };
+
+  const updateNode = (path: number[], updater: (node: TreeNode) => TreeNode) => {
+    setRoot(prev => prev ? setNodeByPath(prev, path, updater(getNodeByPath(prev, path)!)) : prev);
   };
 
   return (
@@ -208,7 +227,7 @@ function App() {
         </div>
       ) : (
         <div>
-          <TreeNodeComponent node={root} path={[]} onApplyRule={(path, node, rule) => applyRule(path, node, rule)} />
+          <TreeNodeComponent node={root} path={[]} onApplyRule={(path, node, rule) => applyRule(path, node, rule)} onUpdateNode={updateNode} />
           <p className={isValidProof(root) ? 'valid' : 'invalid'}>Valid Proof: {isValidProof(root) ? 'Yes' : 'No'}</p>
         </div>
       )}
