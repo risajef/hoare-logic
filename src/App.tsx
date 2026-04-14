@@ -7,6 +7,7 @@ import StatementBuilder from './components/StatementBuilder';
 import IntermediateModal from './components/IntermediateModal';
 import ConsequenceModal from './components/ConsequenceModal';
 import Palette from './components/Palette';
+import { proofExamples } from './examples';
 import './App.css';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
   //   }]
   // }
 );
+  const [selectedExampleId, setSelectedExampleId] = useState(proofExamples[0]?.id ?? '');
   const [preExpr, setPreExpr] = useState<Expression | null>(null);
   const [builtStmt, setBuiltStmt] = useState<BuilderStatement | null>(null);
   const [postExpr, setPostExpr] = useState<Expression | null>(null);
@@ -34,6 +36,31 @@ function App() {
   const [newPreExpr, setNewPreExpr] = useState<Expression | null>(null);
   const [newPostExpr, setNewPostExpr] = useState<Expression | null>(null);
   const [currentPath, setCurrentPath] = useState<number[] | null>(null);
+
+  const activeExample = proofExamples.find((example) => example.id === selectedExampleId) ?? null;
+
+  const resetWorkspace = () => {
+    setRoot(null);
+    setPreExpr(null);
+    setBuiltStmt(null);
+    setPostExpr(null);
+    setEditingIntermediate(false);
+    setIntermediateExpr(null);
+    setEditingConsequence(false);
+    setNewPreExpr(null);
+    setNewPostExpr(null);
+    setCurrentPath(null);
+  };
+
+  const loadExample = () => {
+    const example = proofExamples.find((entry) => entry.id === selectedExampleId);
+    if (!example) {
+      return;
+    }
+
+    resetWorkspace();
+    setRoot(JSON.parse(JSON.stringify(example.root)) as TreeNode);
+  };
 
   const createRoot = () => {
     const stmt = builderToStatement(builtStmt);
@@ -208,6 +235,27 @@ function App() {
 
   return (
     <div>
+      <div className="examples container-bordered">
+        <h2>Example Proofs</h2>
+        <p className="example-description">Load a ready-made proof tree to inspect the available rules, or clear the workspace and build one manually.</p>
+        <div className="example-controls">
+          <label htmlFor="example-proof-select">Example</label>
+          <select
+            id="example-proof-select"
+            className="example-select"
+            value={selectedExampleId}
+            onChange={(event) => setSelectedExampleId(event.target.value)}
+          >
+            {proofExamples.map((example) => (
+              <option key={example.id} value={example.id}>{example.title}</option>
+            ))}
+          </select>
+          <button className="btn-primary" type="button" onClick={loadExample}>Load Example</button>
+          <button className="btn-secondary" type="button" onClick={resetWorkspace}>{root ? 'Clear Proof' : 'Reset Builder'}</button>
+        </div>
+        {activeExample && <p className="example-description">{activeExample.description}</p>}
+      </div>
+
       {/* Main application content: either the creation form (no root) or the tree view */}
       {!root ? (
         <div>
@@ -222,7 +270,7 @@ function App() {
             </div>
             <label>Postcondition:</label>
             <ExpressionBuilder expr={postExpr} onChange={setPostExpr} />
-            <button className="btn-primary" onClick={createRoot}>Create Root</button>
+            <button className="btn-primary" type="button" onClick={createRoot}>Create Root</button>
           </div>
         </div>
       ) : (

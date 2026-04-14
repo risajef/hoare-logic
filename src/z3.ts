@@ -123,22 +123,21 @@ export async function tryZ3(lines: string[], timeoutMs = 6000): Promise<Z3Result
         console.log('results', results)
         let statusStr = 'Unknown';
         if (results && results.length > 0) {
-          
-          const someUnsat = results.some(result => result.toLowerCase() === 'unsat');
-          const allSat = results.every(result => result.toLowerCase() === 'sat');
+          const normalized = results.map((result) => result.trim().toLowerCase());
+          const allUnsat = normalized.every((result) => result === 'unsat');
+          const allSat = normalized.every((result) => result === 'sat');
+          const someUnsat = normalized.some((result) => result === 'unsat');
+          const someSat = normalized.some((result) => result === 'sat');
 
-          if (allSat) {
-            statusStr = 'Valid';
-          } else if (someUnsat) {
-            statusStr = 'Invalid';
-          } else {
-            statusStr = 'Unknown';
-          }
+          if (allUnsat) statusStr = 'Unsat';
+          else if (allSat) statusStr = 'Sat';
+          else if (someUnsat && someSat) statusStr = 'Mixed';
+          else statusStr = 'Unknown';
         }
         if (!results && data?.status && typeof data.status === 'object') {
           const keys = Object.keys(data.status);
-          if (keys.includes('unsat') || keys.includes('Unsat')) statusStr = 'Valid';
-          else if (keys.includes('sat') || keys.includes('Sat')) statusStr = 'Invalid';
+          if (keys.includes('unsat') || keys.includes('Unsat')) statusStr = 'Unsat';
+          else if (keys.includes('sat') || keys.includes('Sat')) statusStr = 'Sat';
           else statusStr = keys[0] || 'Unknown';
         }
 

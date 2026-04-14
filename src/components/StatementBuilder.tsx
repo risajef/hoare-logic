@@ -1,5 +1,4 @@
 import type { BuilderStatement } from '../types';
-import { parseExpression } from '../utils';
 import ExpressionBuilder from './ExpressionBuilder';
 
 interface StatementBuilderProps {
@@ -14,13 +13,9 @@ function StatementBuilder({ stmt, onChange }: StatementBuilderProps) {
     if (type === 'skip') {
       onChange({ type: 'skip' });
     } else if (type === 'assign') {
-      const varName = prompt('Enter variable name');
-      const exprStr = prompt('Enter expression');
-      if (varName && exprStr) {
-        const expr = parseExpression(exprStr);
-        if (expr) {
-          onChange({ type: 'assign', var: varName, expr });
-        }
+      const varName = window.prompt('Enter variable name')?.trim();
+      if (varName) {
+        onChange({ type: 'assign', var: varName, expr: null });
       }
     } else if (type === 'sequence') {
       onChange({ type: 'sequence', s1: null, s2: null });
@@ -35,6 +30,10 @@ function StatementBuilder({ stmt, onChange }: StatementBuilderProps) {
     e.preventDefault();
   };
 
+  const renderRemoveButton = () => (
+    <button type="button" className="btn-remove" aria-label="Remove statement" onClick={() => onChange(null)}>×</button>
+  );
+
   if (!stmt) {
     return (
       <div className="stmt-drop-zone" onDrop={handleDrop} onDragOver={handleDragOver}>
@@ -47,17 +46,20 @@ function StatementBuilder({ stmt, onChange }: StatementBuilderProps) {
     return (
       <div className="stmt-block built">
         skip
-        <button className="btn-remove" onClick={() => onChange(null)}>×</button>
+        {renderRemoveButton()}
       </div>
     );
   }
 
   if (stmt.type === 'assign') {
     return (
-      <div className="stmt-block built">
-        <input value={stmt.var} onChange={e => onChange({ ...stmt, var: e.target.value })} /> :=
-        {stmt.expr ? <ExpressionBuilder expr={stmt.expr} onChange={(newExpr) => onChange({ ...stmt, expr: newExpr })} /> : <span>Drop expression here</span>}
-        <button onClick={() => onChange(null)}>Remove</button>
+      <div className="stmt-block built assign-stmt">
+        <input className="assign-var-input" value={stmt.var} onChange={e => onChange({ ...stmt, var: e.target.value })} />
+        <span className="assign-separator">:=</span>
+        <div className="assign-expression-slot">
+          <ExpressionBuilder expr={stmt.expr} onChange={(newExpr) => onChange({ ...stmt, expr: newExpr })} />
+        </div>
+        {renderRemoveButton()}
       </div>
     );
   }
@@ -66,9 +68,9 @@ function StatementBuilder({ stmt, onChange }: StatementBuilderProps) {
     return (
       <div className="stmt-block built">
         <StatementBuilder stmt={stmt.s1} onChange={(newS1) => onChange({ ...stmt, s1: newS1 })} />
-        ;
+        <span className="stmt-connector">;</span>
         <StatementBuilder stmt={stmt.s2} onChange={(newS2) => onChange({ ...stmt, s2: newS2 })} />
-        <button onClick={() => onChange(null)}>Remove</button>
+        {renderRemoveButton()}
       </div>
     );
   }
@@ -76,13 +78,19 @@ function StatementBuilder({ stmt, onChange }: StatementBuilderProps) {
   if (stmt.type === 'conditional') {
     return (
       <div className="stmt-block built conditional">
-        if
-        <ExpressionBuilder expr={stmt.cond} onChange={(newCond) => onChange({ ...stmt, cond: newCond })} />
-        then
-        <StatementBuilder stmt={stmt.s1} onChange={(newS1) => onChange({ ...stmt, s1: newS1 })} />
-        else
-        <StatementBuilder stmt={stmt.s2} onChange={(newS2) => onChange({ ...stmt, s2: newS2 })} />
-        <button onClick={() => onChange(null)}>Remove</button>
+        <div className="statement-row">
+          <span className="stmt-keyword">if</span>
+          <ExpressionBuilder expr={stmt.cond} onChange={(newCond) => onChange({ ...stmt, cond: newCond })} />
+        </div>
+        <div className="statement-row">
+          <span className="stmt-keyword">then</span>
+          <StatementBuilder stmt={stmt.s1} onChange={(newS1) => onChange({ ...stmt, s1: newS1 })} />
+        </div>
+        <div className="statement-row">
+          <span className="stmt-keyword">else</span>
+          <StatementBuilder stmt={stmt.s2} onChange={(newS2) => onChange({ ...stmt, s2: newS2 })} />
+        </div>
+        {renderRemoveButton()}
       </div>
     );
   }
@@ -90,11 +98,15 @@ function StatementBuilder({ stmt, onChange }: StatementBuilderProps) {
   if (stmt.type === 'while') {
     return (
       <div className="stmt-block built while">
-        while
-        <ExpressionBuilder expr={stmt.cond} onChange={(newCond) => onChange({ ...stmt, cond: newCond })} />
-        do
-        <StatementBuilder stmt={stmt.body} onChange={(newBody) => onChange({ ...stmt, body: newBody })} />
-        <button onClick={() => onChange(null)}>Remove</button>
+        <div className="statement-row">
+          <span className="stmt-keyword">while</span>
+          <ExpressionBuilder expr={stmt.cond} onChange={(newCond) => onChange({ ...stmt, cond: newCond })} />
+        </div>
+        <div className="statement-row">
+          <span className="stmt-keyword">do</span>
+          <StatementBuilder stmt={stmt.body} onChange={(newBody) => onChange({ ...stmt, body: newBody })} />
+        </div>
+        {renderRemoveButton()}
       </div>
     );
   }

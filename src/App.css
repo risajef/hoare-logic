@@ -66,6 +66,21 @@
   background-color: var(--primary-hover);
 }
 
+.btn-secondary {
+  padding: 8px 16px;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  border: 2px solid var(--divider);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .btn-small {
   margin: 2px;
   padding: 5px 10px;
@@ -88,16 +103,38 @@
 
 .btn-remove {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  background: var(--error);
-  color: var(--color-on-dark);
-  border: none;
+  top: -9px;
+  right: -9px;
+  background: var(--bg-main);
+  color: var(--text-main);
+  border: 2px solid var(--divider);
   border-radius: 50%;
   width: 20px;
   height: 20px;
   cursor: pointer;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-remove:hover,
+.btn-remove:focus-visible {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.stmt-block.built:hover > .btn-remove,
+.stmt-block.built:focus-within > .btn-remove,
+.expr-block.built:hover > .btn-remove,
+.expr-block.built:focus-within > .btn-remove {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Common block styles */
@@ -204,6 +241,43 @@
   /* Inherits container-bordered */
 }
 
+.examples {
+  margin-bottom: 20px;
+  padding: 20px;
+  text-align: left;
+}
+
+.examples h2 {
+  margin: 0 0 10px 0;
+  color: var(--primary);
+}
+
+.example-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.example-controls label {
+  font-weight: bold;
+}
+
+.example-select {
+  min-width: 240px;
+  padding: 8px 10px;
+  border: 2px solid var(--divider);
+  border-radius: 6px;
+  background: var(--bg-main);
+  color: var(--text-main);
+}
+
+.example-description {
+  margin: 0;
+  color: var(--text-main);
+}
+
 .form input {
   margin: 5px;
   padding: 8px;
@@ -267,7 +341,12 @@
 .stmt-block.built {
   /* Inherits block-built */
   background-color: var(--accent-gold);
-  padding: 10px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  overflow: visible;
+  padding: 12px;
   border-radius: 15px;
 }
 
@@ -291,7 +370,13 @@
 .expr-block.built {
   /* Inherits block-built */
   background-color: var(--accent-blue);
-  padding: 5px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  overflow: visible;
+  padding: 8px;
   border-radius: 10px;
   margin: 2px;
 }
@@ -308,24 +393,71 @@
   color: var(--text-main);
 }
 
-.sequence, .conditional, .while {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.sequence > div, .conditional > div, .while > div {
-  margin: 5px 0;
-}
-
 .sequence {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.sequence > div {
-  margin: 0 5px;
+.conditional,
+.while {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.statement-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assign-stmt {
+  flex-wrap: wrap;
+}
+
+.assign-var-input {
+  width: 140px;
+}
+
+.assign-separator,
+.stmt-connector,
+.stmt-keyword {
+  font-weight: bold;
+}
+
+.assign-expression-slot {
+  display: inline-flex;
+  align-items: center;
+  min-width: 180px;
+}
+
+.assign-expression-slot .expr-drop-zone {
+  min-width: 180px;
+  min-height: 44px;
+}
+
+@media (max-width: 768px) {
+  .example-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .example-select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .assign-expression-slot {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .assign-expression-slot .expr-drop-zone {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 /* ===== MODAL EDITORS ===== */

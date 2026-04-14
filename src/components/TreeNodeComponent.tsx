@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { TreeNode } from '../types';
-import { exprToString, stmtToString, isValidProof, extractVars, parseExpression } from '../utils';
+import type { Expression, TreeNode } from '../types';
+import { exprToSmt, exprToString, inferVariableSorts, stmtToString, isValidProof } from '../utils';
 import { tryZ3 } from '../z3';
 
 interface TreeNodeComponentProps {
@@ -15,59 +15,80 @@ function TreeNodeComponent({ node, path = [], onApplyRule, onUpdateNode }: TreeN
   const [proveStatus, setProveStatus] = useState<string | null>(null);
   const [proving, setProving] = useState(false);
 
+  const buildObligationQuery = (name: string, left: Expression, right: Expression): string[] => {
+    const varSorts = new Map<string, 'Int' | 'Bool'>();
+    inferVariableSorts(left).forEach((sort, variableName) => varSorts.set(variableName, sort));
+    inferVariableSorts(right).forEach((sort, variableName) => {
+      const existing = varSorts.get(variableName);
+      if (existing && existing !== sort) {
+        throw new Error(`Variable ${variableName} is used as both ${existing} and ${sort}`);
+      }
+      varSorts.set(variableName, sort);
+    });
+
+    const declarations = Array.from(varSorts.entries())
+      .sort()
+      .map(([variableName, sort]) => `(declare-const ${variableName} ${sort})`);
+
+    return [
+      '; ' + name,
+      ...declarations,
+      `(assert (not (=> ${exprToSmt(left)} ${exprToSmt(right)})))`,
+      '(check-sat)',
+    ];
+  };
+
   const handleProve = async () => {
-    const obligations: { name: string; left: string; right: string }[] = [];
+    const obligations: { name: string; left: Expression; right: Expression }[] = [];
     if (node.rule === 'consequence' && node.children.length === 1) {
       const child = node.children[0];
-      obligations.push({ name: 'P_to_Pp', left: exprToString(node.pre), right: exprToString(child.pre) });
-      obligations.push({ name: 'Qp_to_Q', left: exprToString(child.post), right: exprToString(node.post) });
+      obligations.push({ name: 'P_to_Pp', left: node.pre, right: child.pre });
+      obligations.push({ name: 'Qp_to_Q', left: child.post, right: node.post });
     } else {
       setProveStatus('No obligations to prove for this node');
       return;
     }
 
-    // Build SMT-LIB-like lines or a simple textual format expected by the worker
-    const lines: string[] = [
-      ...obligations.map(o => {
-        // Extract vars from this obligation
-        const leftExpr = parseExpression(o.left);
-        const rightExpr = parseExpression(o.right);
-        const obligationVars = new Set<string>();
-        if (leftExpr) extractVars(leftExpr).forEach(v => obligationVars.add(v));
-        if (rightExpr) extractVars(rightExpr).forEach(v => obligationVars.add(v));
-        console.log("number of vars in obligation", obligationVars.size, leftExpr, rightExpr, o);
-        if (obligationVars.size > 0) {
-          const varDecls = Array.from(obligationVars).map(v => `(${v} Int)`).join(' ');
-          return `; ${o.name}\n(assert (forall (${varDecls}) (or ${o.right} (not ${o.left}))))`;
-        } else {
-          return `; ${o.name}\n(assert (or ${o.right} (not ${o.left})))\n(check-sat)`;
-        }
-      })
-    ];
-
     setProving(true);
     setProveStatus('Proving...');
-    console.log('Calling tryZ3 with lines:', lines);
+
     try {
-      const res = await tryZ3(lines);
-      if (!res) {
-        setProveStatus('Z3 solver not available in this deployment');
-      } else if (res.status === 'Valid') {
-        setProveStatus('All obligations proved (Valid)');
-        onUpdateNode(path, node => ({ ...node, obligationsProved: true }));
-      } else if (res.status === 'Invalid') {
-        setProveStatus('At least one obligation is invalid');
-      } else if (res.status === 'Unknown') {
-        setProveStatus('Solver returned unknown');
-      } else if (res.status === 'NoSolver') {
-        setProveStatus('Z3 worker not found' + (res.errors ? ': ' + res.errors.join('; ') : ''));
-      } else if (res.status === 'Timeout') {
-        setProveStatus('Solver timed out');
-      } else if (res.status === 'Error') {
-        setProveStatus('Solver error' + (res.errors ? ': ' + res.errors.join('; ') : ''));
-      } else {
-        setProveStatus(`Result: ${res.status}` + (res.errors ? ': ' + res.errors.join('; ') : ''));
+      for (const obligation of obligations) {
+        const res = await tryZ3(buildObligationQuery(obligation.name, obligation.left, obligation.right));
+
+        if (!res) {
+          setProveStatus('Z3 solver not available in this deployment');
+          return;
+        }
+
+        if (res.status === 'NoSolver') {
+          setProveStatus('Z3 worker not found' + (res.errors ? ': ' + res.errors.join('; ') : ''));
+          return;
+        }
+
+        if (res.status === 'Timeout') {
+          setProveStatus(`Solver timed out while checking ${obligation.name}`);
+          return;
+        }
+
+        if (res.status === 'Error') {
+          setProveStatus('Solver error' + (res.errors ? ': ' + res.errors.join('; ') : ''));
+          return;
+        }
+
+        if (res.status === 'Sat') {
+          setProveStatus(`Obligation ${obligation.name} is not valid`);
+          return;
+        }
+
+        if (res.status !== 'Unsat') {
+          setProveStatus(`Solver returned ${res.status} for ${obligation.name}` + (res.errors ? ': ' + res.errors.join('; ') : ''));
+          return;
+        }
       }
+
+      setProveStatus('All obligations proved (Valid)');
+      onUpdateNode(path, currentNode => ({ ...currentNode, obligationsProved: true }));
     } catch (err: any) {
       setProveStatus('Error running solver: ' + (err?.message || String(err)));
     } finally {

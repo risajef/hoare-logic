@@ -18,6 +18,152 @@ export function exprToString(expr: Expression): string {
   }
 }
 
+export function exprToSmt(expr: Expression): string {
+  switch (expr.type) {
+    case 'var':
+      return expr.name;
+    case 'const':
+      return expr.value.toString();
+    case 'true':
+      return 'true';
+    case 'false':
+      return 'false';
+    case 'binop': {
+      if (!expr.left || !expr.right) {
+        throw new Error('Incomplete binary expression cannot be translated to SMT');
+      }
+
+      let op = expr.op;
+      if (op === '==') op = '=';
+      else if (op === '&&' || op === '∧') op = 'and';
+      else if (op === '||' || op === '∨') op = 'or';
+      else if (op === '≤') op = '<=';
+      else if (op === '≥') op = '>=';
+
+      return `(${op} ${exprToSmt(expr.left)} ${exprToSmt(expr.right)})`;
+    }
+    case 'unop': {
+      if (!expr.expr) {
+        throw new Error('Incomplete unary expression cannot be translated to SMT');
+      }
+
+      const op = expr.op === '!' || expr.op === '¬' ? 'not' : expr.op;
+      return `(${op} ${exprToSmt(expr.expr)})`;
+    }
+  }
+}
+
+export type SmtSort = 'Int' | 'Bool';
+
+function setVariableSort(varSorts: Map<string, SmtSort>, name: string, sort: SmtSort): void {
+  const existing = varSorts.get(name);
+  if (existing && existing !== sort) {
+    throw new Error(`Variable ${name} is used as both ${existing} and ${sort}`);
+  }
+  varSorts.set(name, sort);
+}
+
+function detectExpressionSort(expr: Expression, varSorts: Map<string, SmtSort>): SmtSort | null {
+  switch (expr.type) {
+    case 'const':
+      return 'Int';
+    case 'true':
+    case 'false':
+      return 'Bool';
+    case 'var':
+      return varSorts.get(expr.name) ?? null;
+    case 'unop':
+      return expr.op === '!' || expr.op === '¬' ? 'Bool' : null;
+    case 'binop': {
+      if (['+', '-', '*'].includes(expr.op)) return 'Int';
+      if (['==', '<', '>', '≤', '≥', '&&', '∧', '||', '∨'].includes(expr.op)) return 'Bool';
+      return null;
+    }
+  }
+}
+
+function constrainExpression(expr: Expression, expectedSort: SmtSort, varSorts: Map<string, SmtSort>): void {
+  switch (expr.type) {
+    case 'var':
+      setVariableSort(varSorts, expr.name, expectedSort);
+      return;
+    case 'const':
+      if (expectedSort !== 'Int') {
+        throw new Error(`Numeric constant ${expr.value} cannot be used as ${expectedSort}`);
+      }
+      return;
+    case 'true':
+    case 'false':
+      if (expectedSort !== 'Bool') {
+        throw new Error(`Boolean literal ${expr.type} cannot be used as ${expectedSort}`);
+      }
+      return;
+    case 'unop':
+      if (expectedSort !== 'Bool') {
+        throw new Error(`Unary operator ${expr.op} cannot produce ${expectedSort}`);
+      }
+      if (!expr.expr) {
+        throw new Error('Unary expression is incomplete');
+      }
+      constrainExpression(expr.expr, 'Bool', varSorts);
+      return;
+    case 'binop': {
+      if (!expr.left || !expr.right) {
+        throw new Error('Binary expression is incomplete');
+      }
+
+      if (['+', '-', '*'].includes(expr.op)) {
+        if (expectedSort !== 'Int') {
+          throw new Error(`Arithmetic operator ${expr.op} cannot produce ${expectedSort}`);
+        }
+        constrainExpression(expr.left, 'Int', varSorts);
+        constrainExpression(expr.right, 'Int', varSorts);
+        return;
+      }
+
+      if (['<', '>', '≤', '≥'].includes(expr.op)) {
+        if (expectedSort !== 'Bool') {
+          throw new Error(`Comparison operator ${expr.op} cannot produce ${expectedSort}`);
+        }
+        constrainExpression(expr.left, 'Int', varSorts);
+        constrainExpression(expr.right, 'Int', varSorts);
+        return;
+      }
+
+      if (['&&', '∧', '||', '∨'].includes(expr.op)) {
+        if (expectedSort !== 'Bool') {
+          throw new Error(`Logical operator ${expr.op} cannot produce ${expectedSort}`);
+        }
+        constrainExpression(expr.left, 'Bool', varSorts);
+        constrainExpression(expr.right, 'Bool', varSorts);
+        return;
+      }
+
+      if (expr.op === '==') {
+        if (expectedSort !== 'Bool') {
+          throw new Error('Equality cannot produce Int');
+        }
+
+        const operandSort = detectExpressionSort(expr.left, varSorts)
+          ?? detectExpressionSort(expr.right, varSorts)
+          ?? 'Int';
+
+        constrainExpression(expr.left, operandSort, varSorts);
+        constrainExpression(expr.right, operandSort, varSorts);
+        return;
+      }
+
+      throw new Error(`Unsupported operator ${expr.op}`);
+    }
+  }
+}
+
+export function inferVariableSorts(expr: Expression): Map<string, SmtSort> {
+  const varSorts = new Map<string, SmtSort>();
+  constrainExpression(expr, 'Bool', varSorts);
+  return varSorts;
+}
+
 function tokenize(s: string): string[] {
   const tokens: string[] = [];
   let i = 0;
