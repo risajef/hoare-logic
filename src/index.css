@@ -1,50 +1,56 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  font-family: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.45;
   font-weight: 400;
 
-  /* Force light theme */
   color-scheme: light;
-  color: #1A1A1A;
-  background-color: #FFFFFF;
+  color: #1f2937;
+  background-color: #f3f5f9;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Custom theme variables */
-  --bg-main: #FFFFFF;
-  --bg-secondary: #F5F5F5;
-  --text-main: #1A1A1A;
-  --text-secondary: #666666;
-  --color-on-dark: #FFFFFF;
-  --primary: #DC143C; /* Crimson red */
-  --primary-hover: #B22222; /* Firebrick */
-  --accent-blue: #4169E1; /* Royal blue */
-  --accent-gold: #FFD700; /* Gold */
-  --success: #228B22; /* Forest green */
-  --error: #DC143C; /* Crimson red */
-  --warning: #FFA500; /* Orange */
-  --info: #1E90FF; /* Dodger blue */
-  --divider: #CCCCCC; /* Light gray */
+  --bg-main: #ffffff;
+  --bg-secondary: #f7f9fc;
+  --text-main: #1f2937;
+  --text-secondary: #5f6b7a;
+  --color-on-dark: #ffffff;
+  --primary: #d7264d;
+  --primary-hover: #b61e42;
+  --accent-statement-soft: #fff1d9;
+  --accent-statement-text: #8a5a04;
+  --accent-statement-border: #f4d29a;
+  --accent-expression-soft: #e7efff;
+  --accent-expression-text: #1e458b;
+  --accent-expression-border: #c4d5ff;
+  --success: #228a5a;
+  --error: #c5394f;
+  --warning: #b07900;
+  --info: #2f6adf;
+  --divider: #d8dee9;
+  --shadow-soft: 0 2px 8px rgba(15, 23, 42, 0.08);
+  --shadow-strong: 0 14px 36px rgba(15, 23, 42, 0.24);
 }
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: var(--info);
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
+  color: #1f4eb8;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background:
+    radial-gradient(180% 90% at 0% 0%, #fff7fa 0%, rgba(255, 247, 250, 0) 48%),
+    radial-gradient(120% 100% at 100% 0%, #eef3ff 0%, rgba(238, 243, 255, 0) 45%),
+    #f3f5f9;
 }
 
 h1 {
@@ -53,20 +59,21 @@ h1 {
 }
 
 button {
-  border-radius: 8px;
+  border-radius: 4px;
   border: 1px solid transparent;
-  padding: 0.6em 1.2em;
+  padding: 0.5em 1em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #f9f9f9; /* light button background by default */
+  background-color: #f9f9f9;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.2s;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: #c8cfdb;
 }
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  outline: 2px solid rgba(47, 106, 223, 0.35);
+  outline-offset: 1px;
 }

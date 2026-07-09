@@ -134,16 +134,25 @@ function App() {
       return null;
     }
 
-    if (rule === 'sequence' && node.stmt.type !== 'sequence') {
-      return 'Sequence rule can only be applied to a statement of the form S1; S2.';
+    if (rule === 'sequence') {
+      if (node.stmt.type !== 'sequence') {
+        return 'Sequence rule can only be applied to a statement of the form S1; S2.';
+      }
+      return null;
     }
 
-    if (rule === 'conditional' && node.stmt.type !== 'conditional') {
-      return 'Conditional rule can only be applied to an if-then-else statement.';
+    if (rule === 'conditional') {
+      if (node.stmt.type !== 'conditional') {
+        return 'Conditional rule can only be applied to an if-then-else statement.';
+      }
+      return null;
     }
 
-    if (rule === 'while' && node.stmt.type !== 'while') {
-      return 'While rule can only be applied to a while statement.';
+    if (rule === 'while') {
+      if (node.stmt.type !== 'while') {
+        return 'While rule can only be applied to a while statement.';
+      }
+      return null;
     }
 
     if (rule === 'consequence') {
@@ -330,10 +339,10 @@ function App() {
   };
 
   return (
-    <div>
+    <div className="app-shell">
       <div className="examples container-bordered">
         <h2>Example Proofs</h2>
-        <p className="example-description">Load a ready-made proof tree to inspect the available rules, or clear the workspace and build one manually.</p>
+        {!root && <p className="example-description">Load a ready-made proof tree or build your own compactly from the palette.</p>}
         <div className="example-controls">
           <label htmlFor="example-proof-select">Example</label>
           <select
@@ -354,23 +363,26 @@ function App() {
 
       {/* Main application content: either the creation form (no root) or the tree view */}
       {!root ? (
-        <div>
-          <Palette type="statement" />
-          <Palette type="expression" />
+        <div className="builder-layout">
+          <div className="palette-column">
+            <Palette type="statement" />
+            <Palette type="expression" />
+          </div>
           <div className="form container-bordered">
-            <label>Precondition:</label>
+            <label>Precondition</label>
             <ExpressionBuilder expr={preExpr} onChange={setPreExpr} />
             <div className="stmt-builder-container">
-              <label>Statement:</label>
+              <label>Statement</label>
               <StatementBuilder stmt={builtStmt} onChange={setBuiltStmt} />
             </div>
-            <label>Postcondition:</label>
+            <label>Postcondition</label>
             <ExpressionBuilder expr={postExpr} onChange={setPostExpr} />
             <button className="btn-primary" type="button" onClick={createRoot}>Create Root</button>
           </div>
         </div>
       ) : (
-        <div>
+        <div className="proof-layout">
+          <p className={`proof-status ${isValidProof(root) ? 'valid' : 'invalid'}`}>Proof status: {isValidProof(root) ? 'Valid' : 'Incomplete/invalid'}</p>
           <TreeNodeComponent
             node={root}
             path={[]}
@@ -378,7 +390,6 @@ function App() {
             onRemoveRule={removeRule}
             onUpdateNode={updateNode}
           />
-          <p className={isValidProof(root) ? 'valid' : 'invalid'}>Valid Proof: {isValidProof(root) ? 'Yes' : 'No'}</p>
         </div>
       )}
 
