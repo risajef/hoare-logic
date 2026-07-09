@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { TreeNode, BuilderStatement, Expression } from './types';
-import { isValidProof, builderToStatement, isComplete } from './utils';
+import { isValidProof, builderToStatement, statementToBuilder, isComplete, exprEqual, exprSubstitute, exprToString } from './utils';
 import TreeNodeComponent from './components/TreeNodeComponent';
 import ExpressionBuilder from './components/ExpressionBuilder';
 import StatementBuilder from './components/StatementBuilder';
@@ -52,6 +52,27 @@ function App() {
     setCurrentPath(null);
   };
 
+  const clearProofKeepProgram = () => {
+    if (!root) {
+      resetWorkspace();
+      return;
+    }
+
+    // Clone once so builder edits are decoupled from the old proof tree objects.
+    const preservedRoot = JSON.parse(JSON.stringify(root)) as TreeNode;
+
+    setRoot(null);
+    setPreExpr(preservedRoot.pre);
+    setBuiltStmt(statementToBuilder(preservedRoot.stmt));
+    setPostExpr(preservedRoot.post);
+    setEditingIntermediate(false);
+    setIntermediateExpr(null);
+    setEditingConsequence(false);
+    setNewPreExpr(null);
+    setNewPostExpr(null);
+    setCurrentPath(null);
+  };
+
   const loadExample = () => {
     const example = proofExamples.find((entry) => entry.id === selectedExampleId);
     if (!example) {
@@ -89,7 +110,50 @@ function App() {
     return cur;
   };
 
-  const applyRule = (pathOrNode: number[] | TreeNode, maybeRuleOrNode: any, maybeRule?: string) => {
+  const getRuleApplicationError = (node: TreeNode, rule: string): string | null => {
+    if (rule === 'skip') {
+      if (node.stmt.type !== 'skip') {
+        return 'Skip rule can only be applied to a skip statement.';
+      }
+      if (!exprEqual(node.pre, node.post)) {
+        return `Skip rule requires identical pre and postconditions. Expected postcondition: {${exprToString(node.pre)}}.`;
+      }
+      return null;
+    }
+
+    if (rule === 'assign') {
+      if (node.stmt.type !== 'assign') {
+        return 'Assign rule can only be applied to an assignment statement of the form x := E.';
+      }
+
+      const expectedPre = exprSubstitute(node.post, node.stmt.var, node.stmt.expr);
+      if (!exprEqual(node.pre, expectedPre)) {
+        return `Assign rule requires precondition = postcondition with ${node.stmt.var} replaced by ${exprToString(node.stmt.expr)}. Expected precondition: {${exprToString(expectedPre)}}.`;
+      }
+
+      return null;
+    }
+
+    if (rule === 'sequence' && node.stmt.type !== 'sequence') {
+      return 'Sequence rule can only be applied to a statement of the form S1; S2.';
+    }
+
+    if (rule === 'conditional' && node.stmt.type !== 'conditional') {
+      return 'Conditional rule can only be applied to an if-then-else statement.';
+    }
+
+    if (rule === 'while' && node.stmt.type !== 'while') {
+      return 'While rule can only be applied to a while statement.';
+    }
+
+    if (rule === 'consequence') {
+      return null;
+    }
+
+    return `Unknown rule: ${rule}.`;
+  };
+
+  const applyRule = (pathOrNode: number[] | TreeNode, maybeRuleOrNode: any, maybeRule?: string): string | null => {
     // support two signatures:
     // 1) applyRule(path, rule)  -- new from TreeNodeComponent
     // 2) applyRule(node, rule)  -- legacy
@@ -101,25 +165,32 @@ function App() {
       path = pathOrNode;
       if (typeof maybeRuleOrNode === 'string') {
         rule = maybeRuleOrNode;
-        if (!root) return;
+        if (!root) return 'No proof tree available.';
         node = getNodeByPath(root, path);
-        if (!node) return;
+        if (!node) return 'Could not find the selected node in the proof tree.';
       } else {
         // unexpected shape, try legacy
         node = maybeRuleOrNode;
-        rule = maybeRule!;
+        if (!maybeRule) return 'No rule was selected.';
+        rule = maybeRule;
       }
     } else {
       node = pathOrNode;
+      if (typeof maybeRuleOrNode !== 'string') return 'No rule was selected.';
       rule = maybeRuleOrNode;
     }
 
-    if (!node) return;
+    if (!node) return 'Could not find the selected node in the proof tree.';
+
+    const ruleError = getRuleApplicationError(node, rule);
+    if (ruleError) return ruleError;
 
     const commit = (updatedNode?: TreeNode) => {
       if (!root) return;
       if (path && updatedNode) {
-        const newRoot = setNodeByPath(root, path, updatedNode);
+        const newRoot = path.length === 0
+          ? { ...updatedNode }
+          : setNodeByPath(root, path, updatedNode);
         setRoot(newRoot);
       } else {
         // shallow copy to trigger render
@@ -128,43 +199,54 @@ function App() {
     };
 
     if (rule === 'skip') {
-      if (node.stmt.type !== 'skip') return;
       node.children = [];
       node.rule = 'skip';
       commit(node);
+      return null;
     } else if (rule === 'assign') {
-      if (node.stmt.type !== 'assign') return;
       node.children = [];
       node.rule = 'assign';
       commit(node);
+      return null;
     } else if (rule === 'sequence') {
-      if (node.stmt.type !== 'sequence') return;
       // open modal
       console.log('applyRule: sequence at path', path);
       setEditingIntermediate(true);
       setIntermediateExpr(null);
       setCurrentPath(path || []);
+      return null;
     } else if (rule === 'conditional') {
-      if (node.stmt.type !== 'conditional') return;
+      const conditionalStmt = node.stmt;
+      if (conditionalStmt.type !== 'conditional') {
+        return 'Conditional rule can only be applied to an if-then-else statement.';
+      }
       node.children = [
-        { pre: { type: 'binop', op: '&&', left: node.pre, right: node.stmt.cond }, stmt: node.stmt.s1, post: node.post, children: [] },
-        { pre: { type: 'binop', op: '&&', left: node.pre, right: { type: 'unop', op: '!', expr: node.stmt.cond } }, stmt: node.stmt.s2, post: node.post, children: [] }
+        { pre: { type: 'binop', op: '&&', left: node.pre, right: conditionalStmt.cond }, stmt: conditionalStmt.s1, post: node.post, children: [] },
+        { pre: { type: 'binop', op: '&&', left: node.pre, right: { type: 'unop', op: '!', expr: conditionalStmt.cond } }, stmt: conditionalStmt.s2, post: node.post, children: [] }
       ];
       node.rule = 'conditional';
       commit(node);
+      return null;
     } else if (rule === 'consequence') {
       setEditingConsequence(true);
       setNewPreExpr(null);
       setNewPostExpr(null);
       setCurrentPath(path || []);
+      return null;
     } else if (rule === 'while') {
-      if (node.stmt.type !== 'while') return;
+      const whileStmt = node.stmt;
+      if (whileStmt.type !== 'while') {
+        return 'While rule can only be applied to a while statement.';
+      }
       node.children = [
-        { pre: { type: 'binop', op: '&&', left: node.pre, right: node.stmt.cond }, stmt: node.stmt.body, post: node.pre, children: [] }
+        { pre: { type: 'binop', op: '&&', left: node.pre, right: whileStmt.cond }, stmt: whileStmt.body, post: node.pre, children: [] }
       ];
       node.rule = 'while';
       commit(node);
+      return null;
     }
+
+    return `Unknown rule: ${rule}.`;
   };
 
   const confirmIntermediate = () => {
@@ -233,6 +315,20 @@ function App() {
     setRoot(prev => prev ? setNodeByPath(prev, path, updater(getNodeByPath(prev, path)!)) : prev);
   };
 
+  const removeRule = (path: number[]) => {
+    setRoot(prev => {
+      if (!prev) return prev;
+      const nodeAtPath = getNodeByPath(prev, path);
+      if (!nodeAtPath) return prev;
+      return setNodeByPath(prev, path, {
+        ...nodeAtPath,
+        children: [],
+        rule: undefined,
+        obligationsProved: undefined,
+      });
+    });
+  };
+
   return (
     <div>
       <div className="examples container-bordered">
@@ -251,7 +347,7 @@ function App() {
             ))}
           </select>
           <button className="btn-primary" type="button" onClick={loadExample}>Load Example</button>
-          <button className="btn-secondary" type="button" onClick={resetWorkspace}>{root ? 'Clear Proof' : 'Reset Builder'}</button>
+          <button className="btn-secondary" type="button" onClick={root ? clearProofKeepProgram : resetWorkspace}>{root ? 'Clear Proof' : 'Reset Builder'}</button>
         </div>
         {activeExample && <p className="example-description">{activeExample.description}</p>}
       </div>
@@ -275,7 +371,13 @@ function App() {
         </div>
       ) : (
         <div>
-          <TreeNodeComponent node={root} path={[]} onApplyRule={(path, node, rule) => applyRule(path, node, rule)} onUpdateNode={updateNode} />
+          <TreeNodeComponent
+            node={root}
+            path={[]}
+            onApplyRule={(path, node, rule) => applyRule(path, node, rule)}
+            onRemoveRule={removeRule}
+            onUpdateNode={updateNode}
+          />
           <p className={isValidProof(root) ? 'valid' : 'invalid'}>Valid Proof: {isValidProof(root) ? 'Yes' : 'No'}</p>
         </div>
       )}

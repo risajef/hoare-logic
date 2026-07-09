@@ -97,6 +97,14 @@
   background-color: var(--primary-hover);
 }
 
+.btn-small.btn-danger {
+  background-color: var(--error);
+}
+
+.btn-small.btn-danger:hover {
+  background-color: #8f1d1d;
+}
+
 .btn-small:active {
   cursor: grabbing;
 }
@@ -210,6 +218,16 @@
   border: 1px solid var(--divider);
   border-radius: 8px;
   background: var(--bg-secondary);
+}
+
+.rule-apply-status {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--error);
+  border-radius: 6px;
+  background: rgba(178, 34, 34, 0.08);
+  color: var(--error);
+  text-align: left;
 }
 
 .children {

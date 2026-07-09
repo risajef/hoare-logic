@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Expression, TreeNode } from '../types';
 import { exprToSmt, exprToString, inferVariableSorts, stmtToString, isValidProof } from '../utils';
 import { tryZ3 } from '../z3';
@@ -6,14 +6,30 @@ import { tryZ3 } from '../z3';
 interface TreeNodeComponentProps {
   node: TreeNode;
   path?: number[];
-  onApplyRule: (path: number[], node: TreeNode, rule: string) => void;
+  onApplyRule: (path: number[], node: TreeNode, rule: string) => string | null;
+  onRemoveRule: (path: number[]) => void;
   onUpdateNode: (path: number[], updater: (node: TreeNode) => TreeNode) => void;
 }
 
-function TreeNodeComponent({ node, path = [], onApplyRule, onUpdateNode }: TreeNodeComponentProps) {
+function TreeNodeComponent({ node, path = [], onApplyRule, onRemoveRule, onUpdateNode }: TreeNodeComponentProps) {
   const isValid = isValidProof(node);
   const [proveStatus, setProveStatus] = useState<string | null>(null);
   const [proving, setProving] = useState(false);
+  const [ruleStatus, setRuleStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setProveStatus(null);
+    setProving(false);
+  }, [node.rule, node.children.length]);
+
+  useEffect(() => {
+    setRuleStatus(null);
+  }, [node.rule, node.children.length]);
+
+  const handleApplyRule = (rule: string) => {
+    const error = onApplyRule(path, node, rule);
+    setRuleStatus(error);
+  };
 
   const buildObligationQuery = (name: string, left: Expression, right: Expression): string[] => {
     const varSorts = new Map<string, 'Int' | 'Bool'>();
@@ -104,20 +120,31 @@ function TreeNodeComponent({ node, path = [], onApplyRule, onUpdateNode }: TreeN
         <p>Obligations: {exprToString(node.pre)} ⇒ {exprToString(node.children[0].pre)} and {exprToString(node.children[0].post)} ⇒ {exprToString(node.post)}</p>
       )}
       <div className="rule-buttons">
-        <button className="btn-small" onClick={() => onApplyRule(path, node, 'skip')}>Skip</button>
-        <button className="btn-small" onClick={() => onApplyRule(path, node, 'assign')}>Assign</button>
-        <button className="btn-small" onClick={() => onApplyRule(path, node, 'sequence')}>Sequence</button>
-        <button className="btn-small" onClick={() => onApplyRule(path, node, 'conditional')}>Conditional</button>
-        <button className="btn-small" onClick={() => onApplyRule(path, node, 'consequence')}>Consequence</button>
-        <button className="btn-small" onClick={() => onApplyRule(path, node, 'while')}>While</button>
+        <button className="btn-small" onClick={() => handleApplyRule('skip')}>Skip</button>
+        <button className="btn-small" onClick={() => handleApplyRule('assign')}>Assign</button>
+        <button className="btn-small" onClick={() => handleApplyRule('sequence')}>Sequence</button>
+        <button className="btn-small" onClick={() => handleApplyRule('conditional')}>Conditional</button>
+        <button className="btn-small" onClick={() => handleApplyRule('consequence')}>Consequence</button>
+        <button className="btn-small" onClick={() => handleApplyRule('while')}>While</button>
+        {node.rule && (
+          <button className="btn-small btn-danger" onClick={() => { setRuleStatus(null); onRemoveRule(path); }}>Remove rule</button>
+        )}
         {node.rule === 'consequence' && node.children.length === 1 && (
           <button className="btn-small" onClick={handleProve} disabled={proving} style={{ marginLeft: 8 }}>{proving ? 'Proving...' : 'Prove obligations'}</button>
         )}
       </div>
+      {ruleStatus && <p className="rule-apply-status">{ruleStatus}</p>}
       {proveStatus && <p style={{ marginTop: 8 }}>{proveStatus}</p>}
       <div className="children">
         {node.children.map((child, i) => (
-          <TreeNodeComponent key={i} node={child} path={[...path, i]} onApplyRule={onApplyRule} onUpdateNode={onUpdateNode} />
+          <TreeNodeComponent
+            key={i}
+            node={child}
+            path={[...path, i]}
+            onApplyRule={onApplyRule}
+            onRemoveRule={onRemoveRule}
+            onUpdateNode={onUpdateNode}
+          />
         ))}
       </div>
     </div>

@@ -322,6 +322,31 @@ export function builderToStatement(bs: BuilderStatement | null): Statement | nul
   return null;
 }
 
+export function statementToBuilder(stmt: Statement): BuilderStatement {
+  if (stmt.type === 'skip') return { type: 'skip' };
+  if (stmt.type === 'assign') return { type: 'assign', var: stmt.var, expr: stmt.expr };
+  if (stmt.type === 'sequence') {
+    return {
+      type: 'sequence',
+      s1: statementToBuilder(stmt.s1),
+      s2: statementToBuilder(stmt.s2),
+    };
+  }
+  if (stmt.type === 'conditional') {
+    return {
+      type: 'conditional',
+      cond: stmt.cond,
+      s1: statementToBuilder(stmt.s1),
+      s2: statementToBuilder(stmt.s2),
+    };
+  }
+  return {
+    type: 'while',
+    cond: stmt.cond,
+    body: statementToBuilder(stmt.body),
+  };
+}
+
 export function isComplete(expr: Expression | null): boolean {
   if (!expr) return false;
   if (expr.type === 'var' || expr.type === 'const' || expr.type === 'true' || expr.type === 'false') return true;
