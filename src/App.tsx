@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import type { TreeNode, BuilderStatement, Expression } from './types';
-import { isValidProof, builderToStatement, statementToBuilder, isComplete, exprEqual, exprSubstitute, exprToString } from './utils';
+import {
+  isValidProof,
+  builderToStatement,
+  statementToBuilder,
+  isComplete,
+  exprEqual,
+  exprSubstitute,
+  exprToString,
+  whileRulePostcondition,
+} from './utils';
 import TreeNodeComponent from './components/TreeNodeComponent';
 import ExpressionBuilder from './components/ExpressionBuilder';
 import StatementBuilder from './components/StatementBuilder';
@@ -151,6 +160,10 @@ function App() {
     if (rule === 'while') {
       if (node.stmt.type !== 'while') {
         return 'While rule can only be applied to a while statement.';
+      }
+      const expectedPost = whileRulePostcondition(node.pre, node.stmt.cond);
+      if (!exprEqual(node.post, expectedPost)) {
+        return `While rule requires the exact loop contract {P} while B do S {P and not B}. Expected postcondition: {${exprToString(expectedPost)}}. Use the consequence rule first to transform the outer contract.`;
       }
       return null;
     }

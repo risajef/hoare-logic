@@ -14,6 +14,23 @@ export async function tryZ3(lines: string[], timeoutMs = 6000): Promise<Z3Result
 
   const workerUrl = '/z3/z3-worker.js';
 
+  // A dev server or a misconfigured static host may return the application
+  // HTML for this URL. A Worker then only reports the unhelpful JavaScript
+  // parse error "Unexpected token '<'". Check the response before creating it.
+  try {
+    const response = await fetch(workerUrl, { cache: 'no-store' });
+    const contentType = response.headers.get('content-type') ?? '';
+    const preview = (await response.clone().text()).trimStart();
+    if (!response.ok || contentType.includes('text/html') || preview.startsWith('<')) {
+      return {
+        status: 'NoSolver',
+        errors: ['Z3 worker asset is unavailable. Ensure /z3/z3-worker.js and /z3/z3.wasm/ are deployed.'],
+      };
+    }
+  } catch (error) {
+    return { status: 'NoSolver', errors: [`Z3 worker fetch failed: ${String(error)}`] };
+  }
+
   // First, try to create a worker directly from the deployed URL. This is the most robust approach
   // when the server serves the worker file and its imported assets with normal same-origin URLs.
   let worker: Worker | null = null;
@@ -156,6 +173,13 @@ export async function tryZ3(lines: string[], timeoutMs = 6000): Promise<Z3Result
       try { worker?.terminate(); } catch {}
       if (usedBlob && blobUrl) URL.revokeObjectURL(blobUrl);
       const msg = ev?.message || String(ev);
+      if (/Unexpected token ['"]?</.test(msg)) {
+        resolve({
+          status: 'NoSolver',
+          errors: ['A Z3 runtime asset returned HTML. Ensure /z3/z3-worker.js and /z3/z3.wasm/ are deployed.'],
+        });
+        return;
+      }
       resolve({ status: 'Error', errors: [msg] });
     };
 

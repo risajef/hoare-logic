@@ -229,17 +229,36 @@ export function exprEqual(a: Expression, b: Expression): boolean {
     case 'false': return true;
     case 'binop': {
       const bBinop = b as any;
-      return a.op === bBinop.op &&
+      return normalizeBinaryOperator(a.op) === normalizeBinaryOperator(bBinop.op) &&
              ((a.left === null && bBinop.left === null) || (a.left && bBinop.left && exprEqual(a.left, bBinop.left))) &&
              ((a.right === null && bBinop.right === null) || (a.right && bBinop.right && exprEqual(a.right, bBinop.right)));
     }
     case 'unop': {
       const bUnop = b as any;
-      return a.op === bUnop.op &&
+      return normalizeUnaryOperator(a.op) === normalizeUnaryOperator(bUnop.op) &&
              ((a.expr === null && bUnop.expr === null) || (a.expr && bUnop.expr && exprEqual(a.expr, bUnop.expr)));
     }
   }
   return false;
+}
+
+function normalizeBinaryOperator(operator: string): string {
+  if (operator === '∧') return '&&';
+  if (operator === '∨') return '||';
+  if (operator === '≤') return '<=';
+  if (operator === '≥') return '>=';
+  if (operator === '⨯') return '*';
+  if (operator === '¬') return '!';
+  if (operator === '=') return '==';
+  return operator;
+}
+
+function normalizeUnaryOperator(operator: string): string {
+  return operator === '¬' ? '!' : operator;
+}
+
+export function whileRulePostcondition(invariant: Expression, condition: Expression): Expression {
+  return { type: 'binop', op: '&&', left: invariant, right: { type: 'unop', op: '!', expr: condition } };
 }
 
 export function exprSubstitute(expr: Expression, varName: string, replacement: Expression): Expression {
@@ -280,7 +299,8 @@ export function isValidProof(node: TreeNode): boolean {
   }
   if (node.rule === 'while' && node.stmt.type === 'while' && node.children.length === 1) {
     const child = node.children[0];
-    return exprEqual(child.pre, { type: 'binop', op: '&&', left: node.pre, right: node.stmt.cond }) &&
+    return exprEqual(node.post, whileRulePostcondition(node.pre, node.stmt.cond)) &&
+           exprEqual(child.pre, { type: 'binop', op: '&&', left: node.pre, right: node.stmt.cond }) &&
            exprEqual(child.post, node.pre) &&
            isValidProof(child);
   }
