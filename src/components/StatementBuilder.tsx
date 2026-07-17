@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import type { BuilderStatement } from '../types';
 import ExpressionBuilder from './ExpressionBuilder';
 
@@ -6,17 +7,86 @@ interface StatementBuilderProps {
   onChange: (newStmt: BuilderStatement | null) => void;
 }
 
+interface AssignmentTargetBuilderProps {
+  variable: string | null;
+  onChange: (variable: string | null) => void;
+}
+
+function AssignmentTargetBuilder({ variable, onChange }: AssignmentTargetBuilderProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [pendingName, setPendingName] = useState('x');
+  const cancelledEditor = useRef(false);
+
+  const startEditor = (name: string) => {
+    cancelledEditor.current = false;
+    setPendingName(name);
+    setIsEditing(true);
+  };
+
+  const commitName = () => {
+    if (cancelledEditor.current) {
+      cancelledEditor.current = false;
+      return;
+    }
+    const name = pendingName.trim();
+    if (name) onChange(name);
+    setIsEditing(false);
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    const type = event.dataTransfer.getData('exprType') || event.dataTransfer.getData('text/plain').replace(/^expr:/, '');
+    if (type !== 'var') return;
+
+    startEditor('x');
+  };
+
+  if (isEditing) {
+    return (
+      <input
+        autoFocus
+        className="expr-value-editor assign-target-editor"
+        aria-label="Assignment target variable"
+        value={pendingName}
+        onFocus={(event) => event.currentTarget.select()}
+        onChange={(event) => setPendingName(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') commitName();
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            cancelledEditor.current = true;
+            setIsEditing(false);
+          }
+        }}
+        onBlur={commitName}
+      />
+    );
+  }
+
+  if (!variable) {
+    return (
+      <div className="expr-drop-zone assign-target-drop-zone" onDrop={handleDrop} onDragOver={(event) => event.preventDefault()}>
+        Drop variable here
+      </div>
+    );
+  }
+
+  return (
+    <div className="expr-block built" tabIndex={0} onClick={() => startEditor(variable)}>
+      {variable}
+      <button type="button" className="btn-remove" aria-label="Remove assignment target" onClick={(event) => { event.stopPropagation(); onChange(null); }}>×</button>
+    </div>
+  );
+}
+
 function StatementBuilder({ stmt, onChange }: StatementBuilderProps) {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const type = e.dataTransfer.getData('stmtType');
+    const type = e.dataTransfer.getData('stmtType') || e.dataTransfer.getData('text/plain').replace(/^stmt:/, '');
     if (type === 'skip') {
       onChange({ type: 'skip' });
     } else if (type === 'assign') {
-      const varName = window.prompt('Enter variable name')?.trim();
-      if (varName) {
-        onChange({ type: 'assign', var: varName, expr: null });
-      }
+      onChange({ type: 'assign', var: null, expr: null });
     } else if (type === 'sequence') {
       onChange({ type: 'sequence', s1: null, s2: null });
     } else if (type === 'conditional') {
@@ -36,7 +106,11 @@ function StatementBuilder({ stmt, onChange }: StatementBuilderProps) {
 
   if (!stmt) {
     return (
-      <div className="stmt-drop-zone" onDrop={handleDrop} onDragOver={handleDragOver}>
+      <div
+        className="stmt-drop-zone"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+      >
         Drop statement here
       </div>
     );
@@ -54,7 +128,7 @@ function StatementBuilder({ stmt, onChange }: StatementBuilderProps) {
   if (stmt.type === 'assign') {
     return (
       <div className="stmt-block built assign-stmt">
-        <input className="assign-var-input" value={stmt.var} onChange={e => onChange({ ...stmt, var: e.target.value })} />
+        <AssignmentTargetBuilder variable={stmt.var} onChange={(variable) => onChange({ ...stmt, var: variable })} />
         <span className="assign-separator">:=</span>
         <div className="assign-expression-slot">
           <ExpressionBuilder expr={stmt.expr} onChange={(newExpr) => onChange({ ...stmt, expr: newExpr })} />

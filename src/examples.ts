@@ -193,6 +193,71 @@ const whileProof: TreeNode = {
   ],
 };
 
+const nonNegativeLoopProof: TreeNode = {
+  pre: equal(variable('x'), constant(0)),
+  stmt: {
+    type: 'while',
+    cond: lessEqual(constant(0), variable('x')),
+    body: assignStmt('x', plus(variable('x'), constant(1))),
+  },
+  post: less(variable('x'), constant(0)),
+  rule: 'consequence',
+  obligationsProved: true,
+  children: [
+    {
+      pre: lessEqual(constant(0), variable('x')),
+      stmt: {
+        type: 'while',
+        cond: lessEqual(constant(0), variable('x')),
+        body: assignStmt('x', plus(variable('x'), constant(1))),
+      },
+      post: andExpr(
+        lessEqual(constant(0), variable('x')),
+        notExpr(lessEqual(constant(0), variable('x'))),
+      ),
+      rule: 'while',
+      children: [
+        {
+          pre: andExpr(
+            lessEqual(constant(0), variable('x')),
+            lessEqual(constant(0), variable('x')),
+          ),
+          stmt: assignStmt('x', plus(variable('x'), constant(1))),
+          post: lessEqual(constant(0), variable('x')),
+          rule: 'consequence',
+          obligationsProved: true,
+          children: [
+            {
+              pre: lessEqual(constant(0), plus(variable('x'), constant(1))),
+              stmt: assignStmt('x', plus(variable('x'), constant(1))),
+              post: lessEqual(constant(0), variable('x')),
+              rule: 'assign',
+              children: [],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const falsePreconditionProof: TreeNode = {
+  pre: { type: 'false' },
+  stmt: assignStmt('x', constant(27)),
+  post: equal(variable('x'), constant(13)),
+  rule: 'consequence',
+  obligationsProved: true,
+  children: [
+    {
+      pre: equal(constant(27), constant(13)),
+      stmt: assignStmt('x', constant(27)),
+      post: equal(variable('x'), constant(13)),
+      rule: 'assign',
+      children: [],
+    },
+  ],
+};
+
 export const proofExamples: ProofExample[] = [
   {
     id: 'assign-axiom',
@@ -223,5 +288,17 @@ export const proofExamples: ProofExample[] = [
     title: 'Count To Ten Loop',
     description: 'A worked proof for x := 0; while x < 10 do x := x + 1, including the sequence, consequence, and loop-invariant steps.',
     root: whileProof,
+  },
+  {
+    id: 'non-negative-loop-contradiction',
+    title: 'Infinite loop implies anything',
+    description: 'Starting at x = 0, x := x + 1 preserves 0 ≤ x, so the loop cannot terminate. Its contradictory exit contract therefore implies the requested postcondition x < 0.',
+    root: nonNegativeLoopProof,
+  },
+  {
+    id: 'false-implies-anything',
+    title: 'False implies anything',
+    description: 'A consequence proof for {false} x := 27 {x = 13}: an impossible precondition establishes every assertion.',
+    root: falsePreconditionProof,
   },
 ];

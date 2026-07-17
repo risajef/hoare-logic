@@ -324,7 +324,7 @@ export function stmtToString(stmt: Statement): string {
 export function builderToStatement(bs: BuilderStatement | null): Statement | null {
   if (!bs) return null;
   if (bs.type === 'skip') return { type: 'skip' };
-  if (bs.type === 'assign' && bs.expr) return { type: 'assign', var: bs.var, expr: bs.expr };
+  if (bs.type === 'assign' && bs.var && bs.expr) return { type: 'assign', var: bs.var, expr: bs.expr };
   if (bs.type === 'sequence') {
     const s1 = builderToStatement(bs.s1);
     const s2 = builderToStatement(bs.s2);

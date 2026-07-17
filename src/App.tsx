@@ -17,6 +17,7 @@ import IntermediateModal from './components/IntermediateModal';
 import ConsequenceModal from './components/ConsequenceModal';
 import Palette from './components/Palette';
 import { proofExamples } from './examples';
+import { parseProblem } from './problemParser';
 import './App.css';
 
 function App() {
@@ -45,6 +46,8 @@ function App() {
   const [newPreExpr, setNewPreExpr] = useState<Expression | null>(null);
   const [newPostExpr, setNewPostExpr] = useState<Expression | null>(null);
   const [currentPath, setCurrentPath] = useState<number[] | null>(null);
+  const [problemInput, setProblemInput] = useState('');
+  const [problemInputError, setProblemInputError] = useState<string | null>(null);
 
   const activeExample = proofExamples.find((example) => example.id === selectedExampleId) ?? null;
 
@@ -90,6 +93,19 @@ function App() {
 
     resetWorkspace();
     setRoot(JSON.parse(JSON.stringify(example.root)) as TreeNode);
+  };
+
+  const loadProblem = () => {
+    try {
+      const problem = parseProblem(problemInput);
+      resetWorkspace();
+      setPreExpr(problem.pre);
+      setBuiltStmt(statementToBuilder(problem.stmt));
+      setPostExpr(problem.post);
+      setProblemInputError(null);
+    } catch (error) {
+      setProblemInputError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const createRoot = () => {
@@ -372,6 +388,18 @@ function App() {
           <button className="btn-secondary" type="button" onClick={root ? clearProofKeepProgram : resetWorkspace}>{root ? 'Clear Proof' : 'Reset Builder'}</button>
         </div>
         {activeExample && <p className="example-description">{activeExample.description}</p>}
+        <div className="problem-loader">
+          <label htmlFor="problem-input">Load problem</label>
+          <textarea
+            id="problem-input"
+            value={problemInput}
+            onChange={(event) => setProblemInput(event.target.value)}
+            placeholder="{(= x 0)} while (≤ 0 x) do x := (+ x 1) {(< x 0)}"
+            rows={3}
+          />
+          <button className="btn-secondary" type="button" onClick={loadProblem}>Load into builder</button>
+          {problemInputError && <p className="problem-input-error" role="alert">{problemInputError}</p>}
+        </div>
       </div>
 
       {/* Main application content: either the creation form (no root) or the tree view */}

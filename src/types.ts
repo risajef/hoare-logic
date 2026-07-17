@@ -24,7 +24,7 @@ export type TreeNode = {
 
 export type BuilderStatement = 
   | { type: 'skip' }
-  | { type: 'assign'; var: string; expr: Expression | null }
+  | { type: 'assign'; var: string | null; expr: Expression | null }
   | { type: 'sequence'; s1: BuilderStatement | null; s2: BuilderStatement | null }
   | { type: 'conditional'; cond: Expression | null; s1: BuilderStatement | null; s2: BuilderStatement | null }
   | { type: 'while'; cond: Expression | null; body: BuilderStatement | null };
