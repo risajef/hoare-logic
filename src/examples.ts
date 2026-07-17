@@ -158,29 +158,32 @@ const whileProof: TreeNode = {
       obligationsProved: true,
       children: [
         {
-          pre: lessEqual(constant(0), variable('x')),
+          pre: lessEqual(variable('x'), constant(10)),
           stmt: {
             type: 'while',
             cond: less(variable('x'), constant(10)),
             body: assignStmt('x', plus(variable('x'), constant(1))),
           },
-          post: equal(variable('x'), constant(10)),
+          post: andExpr(
+            lessEqual(variable('x'), constant(10)),
+            notExpr(less(variable('x'), constant(10))),
+          ),
           rule: 'while',
           children: [
             {
               pre: andExpr(
-                lessEqual(constant(0), variable('x')),
+                lessEqual(variable('x'), constant(10)),
                 less(variable('x'), constant(10)),
               ),
               stmt: assignStmt('x', plus(variable('x'), constant(1))),
-              post: lessEqual(constant(0), variable('x')),
+              post: lessEqual(variable('x'), constant(10)),
               rule: 'consequence',
               obligationsProved: true,
               children: [
                 {
-                  pre: lessEqual(constant(0), plus(variable('x'), constant(1))),
+                  pre: lessEqual(plus(variable('x'), constant(1)), constant(10)),
                   stmt: assignStmt('x', plus(variable('x'), constant(1))),
-                  post: lessEqual(constant(0), variable('x')),
+                  post: lessEqual(variable('x'), constant(10)),
                   rule: 'assign',
                   children: [],
                 },

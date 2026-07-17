@@ -267,8 +267,8 @@ function App() {
       return null;
     } else if (rule === 'consequence') {
       setEditingConsequence(true);
-      setNewPreExpr(null);
-      setNewPostExpr(null);
+      setNewPreExpr(JSON.parse(JSON.stringify(node.pre)) as Expression);
+      setNewPostExpr(JSON.parse(JSON.stringify(node.post)) as Expression);
       setCurrentPath(path || []);
       return null;
     } else if (rule === 'while') {
