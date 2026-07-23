@@ -1,24 +1,24 @@
 :root {
-  font-family: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
   line-height: 1.45;
   font-weight: 400;
 
   color-scheme: light;
-  color: #1f2937;
-  background-color: #f3f5f9;
+  color: #1A1A1A;
+  background-color: #FFFFFF;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --bg-main: #ffffff;
-  --bg-secondary: #f7f9fc;
-  --text-main: #1f2937;
-  --text-secondary: #5f6b7a;
+  --bg-main: #FFFFFF;
+  --bg-secondary: #F7F7F7;
+  --text-main: #1A1A1A;
+  --text-secondary: #555555;
   --color-on-dark: #ffffff;
-  --primary: #d7264d;
-  --primary-hover: #b61e42;
+  --primary: #8B0000;
+  --primary-hover: #A11212;
   --accent-statement-soft: #fff1d9;
   --accent-statement-text: #8a5a04;
   --accent-statement-border: #f4d29a;
@@ -36,21 +36,24 @@
 
 a {
   font-weight: 500;
-  color: var(--info);
+  color: var(--primary);
   text-decoration: inherit;
 }
 a:hover {
-  color: #1f4eb8;
+  color: var(--primary-hover);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(180% 90% at 0% 0%, #fff7fa 0%, rgba(255, 247, 250, 0) 48%),
-    radial-gradient(120% 100% at 100% 0%, #eef3ff 0%, rgba(238, 243, 255, 0) 45%),
-    #f3f5f9;
+  background: #FFFFFF;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Gidole', 'Inter', Arial, Helvetica, sans-serif;
+  color: #8B0000;
 }
 
 h1 {
